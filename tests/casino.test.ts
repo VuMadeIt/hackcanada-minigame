@@ -13,7 +13,7 @@ function seeded(seed: number) {
 }
 
 describe("slot machine", () => {
-  it("hits 777 two percent of the time", () => {
+  it("hits 777 five percent of the time", () => {
     const rng = seeded(7);
     const n = 200_000;
     let jackpots = 0;
@@ -23,8 +23,8 @@ describe("slot machine", () => {
       counts[r.outcome] = (counts[r.outcome] ?? 0) + 1;
       if (r.outcome === "jackpot") jackpots++;
     }
-    expect(jackpots / n).toBeGreaterThan(0.018);
-    expect(jackpots / n).toBeLessThan(0.022);
+    expect(jackpots / n).toBeGreaterThan(0.047);
+    expect(jackpots / n).toBeLessThan(0.053);
     expect(counts.pair / n).toBeCloseTo(PAIR_ODDS, 2);
     for (const o of ODDS) expect(counts[o.outcome] / n).toBeCloseTo(o.p, 2);
   });

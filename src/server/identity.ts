@@ -55,6 +55,11 @@ export function devLoginAllowed() {
   return process.env.ALLOW_DEV_LOGIN === "true" || process.env.NODE_ENV !== "production";
 }
 
+/** The casino test buttons (jump to the casino, free coins). Never on in the real launch. */
+export function testToolsAllowed() {
+  return process.env.ALLOW_TEST_TOOLS === "true" || process.env.NODE_ENV !== "production";
+}
+
 function sessionSecret(): string | undefined {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
   return process.env.NODE_ENV !== "production" ? "local-dev-only-session-secret" : undefined;

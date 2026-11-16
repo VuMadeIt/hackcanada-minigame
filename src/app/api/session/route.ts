@@ -1,6 +1,6 @@
 import { hasDb } from "@/server/db";
 import { json, readJson } from "@/server/http";
-import { devLoginAllowed, fromDashboardToken, fromDevName, identityFromRequest, issueSession, type Identity } from "@/server/identity";
+import { devLoginAllowed, testToolsAllowed, fromDashboardToken, fromDevName, identityFromRequest, issueSession, type Identity } from "@/server/identity";
 import { getOrCreatePlayer, rowState } from "@/server/players";
 
 // POST { token } from the dashboard, or { devName } for local testing,
@@ -22,5 +22,6 @@ export async function POST(req: Request) {
     rev: row.rev,
     fresh,
     freeSpins: row.freeSpins,
+    testTools: testToolsAllowed(),
   });
 }

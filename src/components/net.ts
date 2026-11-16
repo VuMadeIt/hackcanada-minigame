@@ -17,6 +17,7 @@ interface Hello {
   rev: number;
   fresh: boolean;
   freeSpins: number;
+  testTools?: boolean;
 }
 
 let session: string | null = null;
@@ -41,7 +42,13 @@ const ls = {
 let rev = 0;
 let saving = false;
 
+let devLogin = false;
+let testTools = false;
+
 export const signedIn = () => session !== null;
+/** No dashboard token, but this server lets you pick a name (local and test servers). */
+export const canPickName = () => !session && devLogin;
+export const hasTestTools = () => session !== null && testTools;
 export const authHeader = (): Record<string, string> => (session ? { authorization: `Bearer ${session}` } : {});
 
 async function post<T>(path: string, body: unknown): Promise<{ status: number; data: T }> {
@@ -73,10 +80,12 @@ function tokenFromParent(ms: number): Promise<string | null> {
   });
 }
 
-export async function connect(): Promise<{ player: Player; state: GameState; fresh: boolean; freeSpins: number } | null> {
+export type Connected = { player: Player; state: GameState; fresh: boolean; freeSpins: number };
+
+export async function connect(pickedName?: string): Promise<Connected | null> {
   const url = new URL(window.location.href);
-  const token = url.searchParams.get("t") ?? (await tokenFromParent(1500));
-  const devName = url.searchParams.get("dev");
+  const token = pickedName ? null : (url.searchParams.get("t") ?? (await tokenFromParent(1500)));
+  const devName = pickedName ?? url.searchParams.get("dev");
   if (token || devName) {
     url.searchParams.delete("t");
     window.history.replaceState(null, "", url.toString());
@@ -90,14 +99,16 @@ export async function connect(): Promise<{ player: Player; state: GameState; fre
     return null;
   }
   try {
-    const { status, data } = await post<Hello>("/api/session", token ? { token } : devName ? { devName } : {});
+    const { status, data } = await post<Hello & { devLogin?: boolean }>("/api/session", token ? { token } : devName ? { devName } : {});
     if (status !== 200) {
       session = null;
+      devLogin = status === 401 && !embedded && data.devLogin === true;
       if (status === 401) ls.set(SESSION_KEY, null);
       return null;
     }
     session = data.session;
     rev = data.rev;
+    testTools = data.testTools === true;
     ls.set(SESSION_KEY, data.session);
     return { player: data.player, state: normalize(data.state, Date.now()), fresh: data.fresh, freeSpins: data.freeSpins };
   } catch {
@@ -192,6 +203,21 @@ export async function leaderboard(): Promise<Board | null> {
   try {
     const res = await fetch("/api/leaderboard", { headers: authHeader(), cache: "no-store" });
     return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+export type BoostKind = "casino" | "coins" | "spins";
+
+/** Test-server only: unlock the casino, add coins or free spins. */
+export async function boost(what: BoostKind): Promise<{ state: GameState; freeSpins: number } | null> {
+  if (!session) return null;
+  try {
+    const { status, data } = await post<{ state?: unknown; rev?: number; freeSpins?: number }>("/api/dev/boost", { what });
+    if (status !== 200 || !data.state || typeof data.rev !== "number") return null;
+    rev = data.rev;
+    return { state: normalize(data.state, Date.now()), freeSpins: data.freeSpins ?? 0 };
   } catch {
     return null;
   }

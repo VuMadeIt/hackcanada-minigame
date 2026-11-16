@@ -32,6 +32,7 @@ background keyed out, palette reduced, sheets cut into single icons).
 | `SESSION_SECRET` | Signs the game's own session tokens. Any long random string. |
 | `DASHBOARD_SECRET` | Shared with the dashboard, which uses it to sign the player token. |
 | `ALLOW_DEV_LOGIN` | `true` lets you play as anyone with `?dev=Name`. Always on in `npm run dev`; keep it off in production. |
+| `ALLOW_TEST_TOOLS` | `true` shows the casino test buttons (skip to level 11, free coins, free spins). Always on in `npm run dev`; keep it off in production. |
 
 Without `DATABASE_URL` the game still runs; it just saves to the browser.
 

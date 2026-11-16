@@ -95,6 +95,14 @@ describe("checkSave", () => {
     expect(checkSave(prev, later, t + 3600_000)).toEqual({ ok: false, reason: "too_fast" });
   });
 
+  it("doesn't let you put back coins you bet at the casino", () => {
+    const { s, t } = play(60);
+    const prev = { ...stored(s, t), casinoCoins: -s.coins };
+    const restored = structuredClone(s);
+    restored.savedAt = t + 1000;
+    expect(checkSave(prev, restored, t + 1000)).toEqual({ ok: false, reason: "spent_mismatch" });
+  });
+
   it("rejects zones you haven't unlocked", () => {
     const { s, t } = play(5);
     s.zone = "night";

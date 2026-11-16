@@ -92,7 +92,8 @@ export async function spin(who: Identity, body: { state?: unknown; rev?: unknown
         lifetimeWood: s.lifetimeWood,
         level: levelFor(s.lifetimeWood),
         savedAt: new Date(now),
-        casinoCoins: row.casinoCoins + reward.coins,
+        // net of bets, so a save can't put back coins that were already wagered
+        casinoCoins: row.casinoCoins + reward.coins - (free ? 0 : bet),
         casinoUpgradeValue: row.casinoUpgradeValue + (reward.upgrade?.value ?? 0),
         casinoWood: row.casinoWood + reward.wood,
         freeSpins,

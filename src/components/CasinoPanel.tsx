@@ -135,7 +135,7 @@ export function CasinoPanel({
             for (let k = 0; k <= i; k++) n[k] = final[k];
             return n;
           });
-          play("click", 0.8 + i * 0.15);
+          play("reelStop", 0.8 + i * 0.15);
           if (i === 2) {
             if (spinTick.current) clearInterval(spinTick.current);
             spinTick.current = null;

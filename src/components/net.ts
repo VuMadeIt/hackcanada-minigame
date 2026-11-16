@@ -1,4 +1,5 @@
 import { normalize, type GameState } from "@/game/state";
+import type { UpgradeId } from "@/game/config";
 
 // Talks to /api. Everything still works without it; you just play on a local save.
 
@@ -155,7 +156,7 @@ export interface SpinReply {
   outcome?: string;
   bet?: number;
   free?: boolean;
-  reward?: { coins: number; wood: number; freeSpins: number; upgrade: { name: string } | null };
+  reward?: { coins: number; wood: number; freeSpins: number; upgrade: { id: UpgradeId; name: string } | null };
   prize?: { name: string; code: string } | null;
   freeSpins?: number;
 }

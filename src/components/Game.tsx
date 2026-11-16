@@ -642,8 +642,10 @@ export default function Game() {
                   cur.coins += r.reward?.coins ?? 0;
                   cur.wood += won;
                   cur.lifetimeWood += won;
-                  cur.upgrades = { ...r.newState.upgrades };
-                  cur.stats.spins = r.newState.stats.spins;
+                  // only the won level; anything bought while the reply was out stays
+                  const up = r.reward?.upgrade;
+                  if (up) cur.upgrades[up.id] = (cur.upgrades[up.id] ?? 0) + 1;
+                  cur.stats.spins++;
                   save();
                   refresh();
                 } else if (r.newState) adoptRef.current(r.newState, false);

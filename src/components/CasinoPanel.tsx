@@ -54,6 +54,12 @@ export function CasinoPanel({
   const [line, setLine] = useState<{ text: string; tone: "win" | "lose" | "big" | "err" } | null>(null);
   const [won, setWon] = useState<{ name: string; code: string; redeemed: boolean }[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const spinTick = useRef<ReturnType<typeof setInterval> | null>(null);
+  // a reply we got but haven't handed to the game yet, so closing early doesn't lose it
+  const unsettled = useRef<(Net.SpinReply & { newState?: GameState }) | null>(null);
+  const settle = useRef(onSettled);
+  settle.current = onSettled;
+  const mounted = useRef(true);
   const signedIn = Net.signedIn();
   const open = casinoOpen(s);
   const cost = spinCost(s, now);
@@ -62,7 +68,14 @@ export function CasinoPanel({
   useEffect(() => {
     void Net.casinoInfo().then((i) => i && setWon(i.prizes));
     const t = timers.current;
-    return () => t.forEach(clearTimeout);
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      t.forEach(clearTimeout);
+      if (spinTick.current) clearInterval(spinTick.current);
+      if (unsettled.current) settle.current(unsettled.current);
+      unsettled.current = null;
+    };
   }, []);
 
   async function pull() {
@@ -76,13 +89,18 @@ export function CasinoPanel({
     setLine(null);
     setStopped([false, false, false]);
     play("whoosh");
-    const spinTick = setInterval(() => {
+    spinTick.current = setInterval(() => {
       setReels(() => [0, 1, 2].map(() => SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]) as Reels);
       play("reel", 1, 60);
     }, 80);
     const started = Date.now();
     const r = await Net.spin(s);
     if (r.ok) onSpent(r.bet ?? 0, !!r.free);
+    if (!mounted.current) {
+      onSettled(r);
+      return;
+    }
+    unsettled.current = r;
     const final = (r.reels ?? reels) as Reels;
     // the third reel hangs a little longer when the first two already match
     const tease = final[0] === final[1] ? 900 : 0;
@@ -103,7 +121,9 @@ export function CasinoPanel({
           });
           play("click", 0.8 + i * 0.15);
           if (i === 2) {
-            clearInterval(spinTick);
+            if (spinTick.current) clearInterval(spinTick.current);
+            spinTick.current = null;
+            unsettled.current = null;
             setBusy(false);
             if (!r.ok) {
               setLine({ text: ERRORS[r.error ?? "network"] ?? ERRORS.network, tone: "err" });

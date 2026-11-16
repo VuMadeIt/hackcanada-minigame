@@ -14,6 +14,25 @@ import { Icon, PxButton } from "./ui";
 
 const SAVE_KEY = "timber-tycoon-save";
 const MUTE_KEY = "timber-tycoon-muted";
+const TAB_KEY = "timber-tycoon-tab";
+
+// localStorage throws outright when the browser blocks storage (some iframes, strict privacy modes)
+const store = {
+  get(k: string): string | null {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set(k: string, v: string) {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      // full or blocked; keep playing without saving
+    }
+  },
+};
 
 const CHIPS: Record<string, string[]> = {
   oak: ["#c98b4b", "#e3b27a", "#8a5a2b", "#f0cf9a"],
@@ -52,7 +71,7 @@ function unlockLine(level: number): string {
 
 function loadSave(now: number): GameState {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = store.get(SAVE_KEY);
     if (raw) return normalize(JSON.parse(raw), now);
   } catch {
     // corrupted save, start over
@@ -77,6 +96,9 @@ export default function Game() {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [golden, setGolden] = useState<Golden | null>(null);
   const goldenRef = useRef<Golden | null>(null);
+  const [elsewhere, setElsewhere] = useState(false);
+  const elsewhereRef = useRef(false);
+  const tabId = useMemo(() => Math.random().toString(36).slice(2), []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -94,13 +116,9 @@ export default function Game() {
 
   const save = useCallback(() => {
     const s = sRef.current;
-    if (!s) return;
+    if (!s || elsewhereRef.current) return;
     s.savedAt = Date.now();
-    try {
-      localStorage.setItem(SAVE_KEY, JSON.stringify(s));
-    } catch {
-      // storage full or blocked (private mode); keep playing
-    }
+    store.set(SAVE_KEY, JSON.stringify(s));
   }, []);
 
   const showBanner = useCallback((b: Omit<Banner, "key">, ms = 2600) => {
@@ -127,7 +145,16 @@ export default function Game() {
     sRef.current = s;
     if (away.wood > 0) setWelcome(away);
     if (s.nextGoldenAt < now) E.scheduleGolden(s, now, Math.random);
-    const m = localStorage.getItem(MUTE_KEY) === "1";
+    // only one tab plays at a time, otherwise two tabs keep overwriting each other's save
+    store.set(TAB_KEY, tabId);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === TAB_KEY && e.newValue && e.newValue !== tabId) {
+        elsewhereRef.current = true;
+        setElsewhere(true);
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    const m = store.get(MUTE_KEY) === "1";
     setMuted(m);
     setMutedUi(m);
     for (const k of ["coin", "log"] as const) {
@@ -149,6 +176,7 @@ export default function Game() {
 
     const step = () => {
       const st = sRef.current!;
+      if (elsewhereRef.current) return;
       const t = Date.now();
       const dt = Math.min(OFFLINE.maxSec, Math.max(0, (t - last) / 1000));
       last = t;
@@ -223,10 +251,20 @@ export default function Game() {
       clearInterval(bg);
       document.removeEventListener("visibilitychange", onHide);
       window.removeEventListener("pagehide", save);
+      window.removeEventListener("storage", onStorage);
       fx.detach();
       save();
     };
-  }, [fx, refresh, save, celebrateLevel]);
+  }, [fx, refresh, save, celebrateLevel, tabId]);
+
+  const playHere = useCallback(() => {
+    const now = Date.now();
+    sRef.current = loadSave(now);
+    elsewhereRef.current = false;
+    store.set(TAB_KEY, tabId);
+    setElsewhere(false);
+    refresh();
+  }, [tabId, refresh]);
 
   // ---------- chopping ----------
   const doChop = useCallback(
@@ -382,7 +420,7 @@ export default function Game() {
     const m = !muted;
     setMuted(m);
     setMutedUi(m);
-    localStorage.setItem(MUTE_KEY, m ? "1" : "0");
+    store.set(MUTE_KEY, m ? "1" : "0");
     if (!m) {
       unlockAudio();
       setTimeout(() => play("click"), 50);
@@ -503,6 +541,17 @@ export default function Game() {
 
           {panel === "shop" && <ShopPanel s={s} now={now} onClose={() => setPanel(null)} act={shopActions} />}
 
+          {elsewhere && (
+            <div className="modal-back">
+              <div className="modal">
+                <h2>Open in another tab</h2>
+                <p>You&apos;re chopping in another tab, so this one is paused to keep your save safe.</p>
+                <PxButton tone="green" onClick={playHere}>
+                  Play here instead
+                </PxButton>
+              </div>
+            </div>
+          )}
           {welcome && (
             <div className="modal-back" onClick={() => setWelcome(null)}>
               <div className="modal">

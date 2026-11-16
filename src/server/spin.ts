@@ -60,18 +60,22 @@ export async function spin(who: Identity, body: { state?: unknown; rev?: unknown
     let prize: { name: string; code: string } | null = null;
 
     if (outcome === "jackpot") {
-      const shelf = await tx.select().from(prizes).where(gt(prizes.stock, prizes.awarded));
-      const total = shelf.reduce((a, p) => a + p.weight, 0);
-      let pick = rng() * total;
-      const chosen = shelf.find((p) => (pick -= p.weight) < 0) ?? shelf[0];
-      const taken = chosen
-        ? await tx
-            .update(prizes)
-            .set({ awarded: sql`${prizes.awarded} + 1` })
-            .where(and(eq(prizes.id, chosen.id), gt(prizes.stock, prizes.awarded)))
-            .returning({ id: prizes.id })
-        : [];
-      if (chosen && taken[0]) {
+      let shelf = await tx.select().from(prizes).where(gt(prizes.stock, prizes.awarded));
+      let chosen: (typeof shelf)[number] | null = null;
+      // someone else can grab the last one of a prize at the same moment; then try the rest
+      while (shelf.length && !chosen) {
+        const total = shelf.reduce((a, p) => a + p.weight, 0);
+        let pick = rng() * total;
+        const p = shelf.find((x) => (pick -= x.weight) < 0) ?? shelf[0];
+        const taken = await tx
+          .update(prizes)
+          .set({ awarded: sql`${prizes.awarded} + 1` })
+          .where(and(eq(prizes.id, p.id), gt(prizes.stock, prizes.awarded)))
+          .returning({ id: prizes.id });
+        if (taken[0]) chosen = p;
+        else shelf = shelf.filter((x) => x.id !== p.id);
+      }
+      if (chosen) {
         prize = { name: chosen.name, code: claimCode() };
         await tx.insert(prizeClaims).values({ playerId: who.id, playerName: who.name, prizeId: chosen.id, prizeName: chosen.name, code: prize.code });
       } else {

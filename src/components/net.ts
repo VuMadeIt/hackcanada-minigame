@@ -156,7 +156,7 @@ export interface SpinReply {
   outcome?: string;
   bet?: number;
   free?: boolean;
-  reward?: { coins: number; wood: number; freeSpins: number; upgrade: { id: UpgradeId; name: string } | null };
+  reward?: { coins: number; wood: number; freeSpins: number; upgrade: { id: UpgradeId; name: string; value: number } | null };
   prize?: { name: string; code: string } | null;
   freeSpins?: number;
 }

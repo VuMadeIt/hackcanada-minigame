@@ -657,9 +657,15 @@ export default function Game() {
                   cur.coins += r.reward?.coins ?? 0;
                   cur.wood += won;
                   cur.lifetimeWood += won;
-                  // only the won level; anything bought while the reply was out stays
+                  // only the won level; anything bought while the reply was out stays.
+                  // If that same upgrade was bought meanwhile, the win is paid out as its price instead,
+                  // so the level can't pass the cap and the server's spending check still adds up.
                   const up = r.reward?.upgrade;
-                  if (up) cur.upgrades[up.id] = (cur.upgrades[up.id] ?? 0) + 1;
+                  if (up) {
+                    const have = cur.upgrades[up.id] ?? 0;
+                    if (have >= (r.newState.upgrades[up.id] ?? 0)) cur.coins += up.value;
+                    else cur.upgrades[up.id] = have + 1;
+                  }
                   cur.stats.spins++;
                   save();
                   refresh();

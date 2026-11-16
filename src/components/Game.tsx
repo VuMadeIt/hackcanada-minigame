@@ -176,8 +176,12 @@ export default function Game() {
 
     const step = () => {
       const st = sRef.current!;
-      if (elsewhereRef.current) return;
       const t = Date.now();
+      if (elsewhereRef.current) {
+        // keep the clock moving so "Play here" doesn't pay out the paused time again
+        last = t;
+        return;
+      }
       const dt = Math.min(OFFLINE.maxSec, Math.max(0, (t - last) / 1000));
       last = t;
       const r = E.tick(st, dt, t, Math.random);

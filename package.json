@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "build:demo": "bash scripts/build-demo.sh",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

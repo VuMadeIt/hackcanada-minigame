@@ -3,6 +3,7 @@ import { BONE_MEAL_PER_LEVEL, BUILDINGS, TOOLS, UPGRADES, ZONES, type BuildingId
 import { buildingCost, canBuyUpgrade, derive, levelFor, maxAffordable, upgradeCost } from "@/game/engine";
 import { fmt } from "@/game/format";
 import type { GameState } from "@/game/state";
+import { spriteUrl } from "./sprites";
 import { Icon, Panel, PxButton } from "./ui";
 
 type Tab = "tools" | "crew" | "upgrades" | "zones";
@@ -162,7 +163,7 @@ export function ShopPanel({ s, now, onClose, act }: { s: GameState; now: number;
             const here = s.zone === z.id;
             return (
               <li key={z.id} className={`row zone ${open ? "" : "dim"} ${here ? "owned" : ""}`}>
-                <div className={`zone-thumb ${z.id}`} />
+                <div className="zone-thumb" style={{ backgroundImage: `url(${spriteUrl(`bg/${z.id}`)})` }} />
                 <div className="row-text">
                   <b>{z.name}</b>
                   <small>{open ? `x${z.mult} wood on everything` : `Opens at level ${z.unlockLevel}`}</small>

@@ -133,12 +133,12 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
     if (!firsts.has(what)) firsts.set(what, now / 1000);
     lastBuy = playSec;
   };
-  const snap = () => {
-    while (checkpoints.length && now >= checkpoints[0] * 3600_000) {
-      if ([4, 12, 36].includes(checkpoints[0]) && casinoAt !== null) rtps.push(`${checkpoints[0]}h ${rtp(s, now)}`);
-      snaps.push(`${fmtT(checkpoints.shift()! * 3600)}: Lv ${E.levelFor(s.lifetimeWood)}, ${fmtN(s.lifetimeWood)} wood`);
+  const snap = (st = s, at = now) => {
+    while (checkpoints.length && at >= checkpoints[0] * 3600_000) {
+      if ([4, 12, 36].includes(checkpoints[0]) && casinoAt !== null) rtps.push(`${checkpoints[0]}h ${rtp(st, at)}`);
+      snaps.push(`${fmtT(checkpoints.shift()! * 3600)}: Lv ${E.levelFor(st.lifetimeWood)}, ${fmtN(st.lifetimeWood)} wood`);
       if (process.env.SIM_DEBUG) {
-        const d = E.derive(s, now);
+        const d = E.derive(st, at);
         console.log(fmtT(now / 1000), { tool: d.tool.name, chop: fmtN(d.chopPower), passive: fmtN(d.passive), auto: d.autoChopsPerSec, fell: fmtN(d.fellBonus), hp: fmtN(d.treeMaxHp), up: JSON.stringify(s.upgrades), b: JSON.stringify(s.buildings) });
       }
     }
@@ -182,13 +182,16 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
         snap();
       }
     } else {
-      // settle in pieces so a checkpoint inside the break only sees what was earned by then
-      while (now < back) {
-        const mark = checkpoints.length ? checkpoints[0] * 3600_000 : Infinity;
-        now = Math.min(back, mark);
-        if (now - s.savedAt >= 60_000) E.applyOffline(s, now);
-        snap();
+      // checkpoints inside the break peek at a copy; the real save settles once, like the game does
+      while (checkpoints.length && checkpoints[0] * 3600_000 < back) {
+        const mark = checkpoints[0] * 3600_000;
+        const peek = structuredClone(s);
+        E.applyOffline(peek, mark);
+        snap(peek, mark);
       }
+      now = back;
+      E.applyOffline(s, now);
+      snap();
     }
     if (s.nextGoldenAt < now) E.scheduleGolden(s, now, rng);
     shop(s, now, p, log);

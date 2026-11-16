@@ -70,7 +70,7 @@ export function derive(s: GameState, now: number) {
 
   let buildingRate = 0;
   for (const b of BUILDINGS) buildingRate += owned(s, b.id) * b.rate;
-  const passive = buildingRate * (1 + 0.25 * lv(s, "bone_meal")) * levelMult * zoneMult;
+  const passive = buildingRate * (1 + 0.15 * lv(s, "bone_meal")) * levelMult * zoneMult;
 
   const priceBase = MARKET.basePrice * (1 + MARKET.hagglePerLevel * lv(s, "haggling"));
   const treeMaxHp = Math.max(1, chopPower * CHOP.treeHpChops * (1 - CHOP.wateringHpCut * lv(s, "watering_can")));

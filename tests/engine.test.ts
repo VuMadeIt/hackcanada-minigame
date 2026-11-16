@@ -136,7 +136,7 @@ describe("market and passive income", () => {
     const s = newGame(0);
     s.buildings.beaver = 10;
     const r = tick(s, 1, 0, never);
-    expect(r.passive).toBeCloseTo(4);
+    expect(r.passive).toBeCloseTo(10 * BUILDINGS[0].rate);
   });
 
   it("robo arm chops on its own", () => {

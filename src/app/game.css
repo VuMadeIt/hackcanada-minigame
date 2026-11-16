@@ -145,6 +145,8 @@
   z-index: 2;
   -webkit-tap-highlight-color: transparent;
 }
+/* the oak's crown is tall, so it reaches up behind the health box */
+.tree.oak { height: min(96cqh, 120cqw); bottom: 3%; aspect-ratio: 120 / 175; }
 .tree-img { height: 100%; width: auto; max-width: none; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, 0.25)); }
 .tree-img.stump { height: 45%; }
 .trunk { position: relative; height: 100%; display: flex; }
@@ -423,6 +425,7 @@
   .half { display: none; }
   .panel { right: 4px; left: 4px; width: auto; bottom: 72px; }
   .tree { height: min(78cqh, 92cqw); }
+  .tree.oak { height: min(92cqh, 120cqw); }
   .hint { bottom: auto; top: 30%; font-size: 14px; white-space: nowrap; }
   .paw { height: min(40cqh, 50cqw); }
 }

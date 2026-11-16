@@ -22,8 +22,9 @@ const MUTE_KEY = "timber-tycoon-muted";
 const TAB_KEY = "timber-tycoon-tab";
 
 // Where the axe bites into each tree, as a fraction of the sprite (x from the left, y from the top).
-// The stump fills the trunk below that line.
-const NOTCH: Record<string, [number, number]> = { oak: [0.69, 0.47], birch: [0.64, 0.63], maple: [0.73, 0.6], ancient: [0.69, 0.56] };
+const NOTCH: Record<string, [number, number]> = { oak: [0.66, 0.66], birch: [0.64, 0.63], maple: [0.73, 0.6], ancient: [0.69, 0.56] };
+// stump height as a share of the tree, picked so the stump is as wide as the trunk it replaces
+const STUMP_H: Record<string, number> = { oak: 0.28, birch: 0.37, maple: 0.4, ancient: 0.44 };
 // the cutting edge of each paw sprite, same units
 const BLADE: Record<string, [number, number]> = { chainsaw: [0.02, 0.08] };
 const STRIKE_DEG = -28;
@@ -649,7 +650,7 @@ export default function Game() {
 
             <div
               ref={treeRef}
-              className="tree"
+              className={`tree ${stump ? lastFelled.current : s.tree.species}`}
               data-testid="tree"
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
@@ -661,7 +662,7 @@ export default function Game() {
                 <img
                   className="tree-img stump"
                   src={spriteUrl(`tree/stump_${lastFelled.current}`)}
-                  style={{ height: `${(1 - (NOTCH[lastFelled.current] ?? NOTCH.oak)[1]) * 100}%` }}
+                  style={{ height: `${(STUMP_H[lastFelled.current] ?? 0.4) * 100}%` }}
                   alt={`${lastFelled.current} stump`}
                   draggable={false}
                 />

@@ -187,9 +187,11 @@ export default function Game() {
       const local = sRef.current!;
       const mine = hello.fresh || store.get(OWNER_KEY) === hello.player.id;
       store.set(OWNER_KEY, hello.player.id);
-      if (mine && local.lifetimeWood > hello.state.lifetimeWood) {
+      // savedAt, not lifetime wood: a sale or purchase changes the save without adding wood
+      if (mine && local.savedAt > hello.state.savedAt && local.lifetimeWood >= hello.state.lifetimeWood) {
         const r = await Net.push(local, { import: hello.fresh });
-        if (!r.ok) adopt(r.state ?? hello.state, true);
+        // no state back means the request itself failed; keep playing on the local save
+        if (!r.ok && r.state) adopt(r.state, true);
       } else {
         adopt(hello.state, true);
       }

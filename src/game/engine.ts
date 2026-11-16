@@ -324,7 +324,7 @@ export function setZone(s: GameState, id: ZoneId, now: number): boolean {
   return true;
 }
 
-// ---------- golden beaver ----------
+// ---------- golden maple leaf ----------
 
 export type GoldenKind = "frenzy" | "pile" | "storm";
 

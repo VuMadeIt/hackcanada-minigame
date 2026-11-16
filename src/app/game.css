@@ -147,43 +147,6 @@
 .tree-img.stump { height: 45%; }
 .trunk { position: relative; height: 100%; display: flex; }
 .trunk.grow { animation: grow 0.35s cubic-bezier(0.3, 1.6, 0.6, 1); transform-origin: 50% 100%; }
-/* the wedge the axe opens up; it gets deeper as the tree loses HP */
-.cut {
-  position: absolute;
-  width: calc(var(--cut) * 17%);
-  aspect-ratio: 1 / 1.15;
-  transform: translate(-100%, -50%);
-  background: #3a1f0e;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%);
-  pointer-events: none;
-}
-.cut::after {
-  content: "";
-  position: absolute;
-  inset: 16% 0 16% 26%;
-  background: var(--heart);
-  clip-path: polygon(100% 0, 0 50%, 100% 100%);
-}
-/* the top half of the tree, tipping over from the hinge opposite the notch */
-.trunk.falling {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  translate: -50% 0;
-  pointer-events: none;
-  clip-path: inset(0 0 calc((1 - var(--ny)) * 100%) 0);
-  transform-origin: calc(var(--nx) * 100%) calc(var(--ny) * 100%);
-  animation: fall 1s forwards;
-  z-index: 1;
-}
-@keyframes fall {
-  0% { transform: rotate(0deg); animation-timing-function: ease-out; }
-  10% { transform: rotate(2.5deg); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.5); }
-  62% { transform: translateY(calc((1 - var(--ny)) * 80%)) rotate(-86deg); animation-timing-function: ease-out; }
-  70% { transform: translateY(calc((1 - var(--ny)) * 76%)) rotate(-80deg); animation-timing-function: ease-in; }
-  78% { transform: translateY(calc((1 - var(--ny)) * 80%)) rotate(-86deg); opacity: 1; }
-  100% { transform: translateY(calc((1 - var(--ny)) * 80%)) rotate(-86deg); opacity: 0; }
-}
 .sound-toggle {
   position: absolute;
   top: 10px;

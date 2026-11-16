@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUILDINGS, CASINO_UNLOCK_LEVEL, CHOP, GOLDEN, OFFLINE, TOOLS, UPGRADES, ZONES, type BuildingId, type UpgradeId, type ZoneId } from "@/game/config";
 import * as E from "@/game/engine";
 import { fmt, fmtTime } from "@/game/format";
@@ -21,15 +21,13 @@ const MUTE_KEY = "timber-tycoon-muted";
 const TAB_KEY = "timber-tycoon-tab";
 
 // Where the axe bites into each tree, as a fraction of the sprite (x from the left, y from the top).
-// The stump fills the trunk below that line and the falling half is everything above it.
+// The stump fills the trunk below that line.
 const NOTCH: Record<string, [number, number]> = { oak: [0.69, 0.47], birch: [0.64, 0.63], maple: [0.73, 0.6], ancient: [0.69, 0.56] };
-const HEARTWOOD: Record<string, string> = { oak: "#e9c27d", birch: "#f3e6c4", maple: "#eab27a", ancient: "#c9a0e8" };
 // the cutting edge of each paw sprite, same units
 const BLADE: Record<string, [number, number]> = { chainsaw: [0.02, 0.08] };
 const STRIKE_DEG = -28;
 const SWING_MS = 200;
 const SWING_HIT_MS = 110;
-const FALL_LAND_MS = 620;
 
 // localStorage throws outright when the browser blocks storage (some iframes, strict privacy modes)
 const store = {
@@ -125,7 +123,6 @@ export default function Game() {
   const treeRef = useRef<HTMLDivElement>(null);
   const pawRef = useRef<HTMLImageElement>(null);
   const trunkRef = useRef<HTMLDivElement>(null);
-  const [fall, setFall] = useState<{ key: number; species: string } | null>(null);
   const lastFelled = useRef("oak");
   const fellRef = useRef<(species: string) => void>(() => {});
   const helloRef = useRef<(hello: Net.Connected) => Promise<void>>(async () => {});
@@ -397,19 +394,14 @@ export default function Game() {
   const fellTree = useCallback(
     (species: string) => {
       lastFelled.current = species;
-      setFall({ key: Date.now(), species });
-      play("creak");
-      setTimeout(() => {
-        const tr = treeRef.current?.getBoundingClientRect();
-        const st = sRef.current;
-        play("fell");
-        stageRef.current?.animate([{ transform: "translateY(0)" }, { transform: "translateY(8px)" }, { transform: "translateY(-3px)" }, { transform: "translateY(0)" }], { duration: 320 });
-        if (tr && st) {
-          // the crown lands to the left of the stump
-          fx.leaves(tr.left - tr.width * 0.7, tr.left + tr.width * 0.2, tr.bottom - tr.height * 0.25, 26, LEAVES[st.zone]);
-          fx.chips(tr.left - tr.width * 0.2, tr.bottom - tr.height * 0.08, 24, CHIPS[species] ?? CHIPS.oak, 1.2);
-        }
-      }, FALL_LAND_MS);
+      const tr = treeRef.current?.getBoundingClientRect();
+      const st = sRef.current;
+      play("fell");
+      stageRef.current?.animate([{ transform: "translateY(0)" }, { transform: "translateY(8px)" }, { transform: "translateY(-3px)" }, { transform: "translateY(0)" }], { duration: 320 });
+      if (tr && st) {
+        fx.leaves(tr.left, tr.right, tr.top + tr.height * 0.3, 26, LEAVES[st.zone]);
+        fx.chips(tr.left + tr.width / 2, tr.bottom - tr.height * 0.08, 24, CHIPS[species] ?? CHIPS.oak, 1.2);
+      }
     },
     [fx],
   );
@@ -683,34 +675,6 @@ export default function Game() {
                 <div ref={trunkRef} key={s.stats.treesFelled} className="trunk grow">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="tree-img" src={spriteUrl(`tree/${s.tree.species}`)} alt={`${s.tree.species} tree`} draggable={false} />
-                  <span
-                    className="cut"
-                    style={
-                      {
-                        left: `${(NOTCH[s.tree.species] ?? NOTCH.oak)[0] * 100}%`,
-                        top: `${(NOTCH[s.tree.species] ?? NOTCH.oak)[1] * 100}%`,
-                        "--cut": Math.min(1, Math.max(0, 1 - s.tree.hp / s.tree.maxHp)),
-                        "--heart": HEARTWOOD[s.tree.species] ?? HEARTWOOD.oak,
-                      } as CSSProperties
-                    }
-                  />
-                </div>
-              )}
-              {fall && (
-                <div
-                  key={fall.key}
-                  className="trunk falling"
-                  style={
-                    {
-                      "--nx": 1 - (NOTCH[fall.species] ?? NOTCH.oak)[0],
-                      "--ny": (NOTCH[fall.species] ?? NOTCH.oak)[1],
-                    } as CSSProperties
-                  }
-                  onAnimationEnd={() => setFall((f) => (f?.key === fall.key ? null : f))}
-                  aria-hidden
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="tree-img" src={spriteUrl(`tree/${fall.species}`)} alt="" draggable={false} />
                 </div>
               )}
               {(s.upgrades.robo_arm ?? 0) > 0 && (

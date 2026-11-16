@@ -77,10 +77,12 @@ describe("checkSave", () => {
     expect(checkSave(stored(s, t), older, t + 1000)).toEqual({ ok: false, reason: "went_backwards" });
   });
 
-  it("rejects a frenzy that never ends", () => {
+  it("cuts a frenzy that never ends down to one golden beaver's worth", () => {
     const { s, t } = play(30);
     s.frenzyUntil = t + 3600_000;
-    expect(checkSave(stored(newGame(0), 0), s, t)).toEqual({ ok: false, reason: "bad_timer" });
+    const r = checkSave(stored(newGame(0), 0), s, t);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.state.frenzyUntil).toBeLessThanOrEqual(t + 30_000);
   });
 
   it("doesn't allow frenzy-speed wood for a whole hour", () => {

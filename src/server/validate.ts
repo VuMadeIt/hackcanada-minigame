@@ -48,7 +48,9 @@ export function checkSave(prev: Stored, incoming: unknown, now: number, opts: { 
 
   // a frenzy only comes from catching a golden beaver, so it can't run longer than one does
   const maxBuffAt = now + Math.max(GOLDEN.frenzySec, GOLDEN.stormSec) * 1000 + 5000;
-  if (s.frenzyUntil > maxBuffAt || s.stormUntil > maxBuffAt) return { ok: false, reason: "bad_timer" };
+  // clamp rather than reject, since the browser clock can be a bit off from ours
+  s.frenzyUntil = Math.min(s.frenzyUntil, maxBuffAt);
+  s.stormUntil = Math.min(s.stormUntil, maxBuffAt);
 
   // speed limit: perfect play without frenzy, plus a frenzy and a log pile from every golden beaver
   // that could have shown up in that time

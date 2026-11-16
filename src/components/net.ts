@@ -1,0 +1,139 @@
+import { normalize, type GameState } from "@/game/state";
+
+// Talks to /api. Everything still works without it; you just play on a local save.
+
+const SESSION_KEY = "timber-tycoon-session";
+
+export interface Player {
+  id: string;
+  name: string;
+}
+
+interface Hello {
+  session: string;
+  player: Player;
+  state: unknown;
+  rev: number;
+  fresh: boolean;
+  freeSpins: number;
+}
+
+let session: string | null = null;
+
+const ls = {
+  get: (k: string) => {
+    try {
+      return localStorage.getItem(k);
+    } catch {
+      return null;
+    }
+  },
+  set: (k: string, v: string | null) => {
+    try {
+      if (v === null) localStorage.removeItem(k);
+      else localStorage.setItem(k, v);
+    } catch {
+      // blocked storage: the session just lasts until reload
+    }
+  },
+};
+let rev = 0;
+let saving = false;
+
+export const signedIn = () => session !== null;
+export const authHeader = (): Record<string, string> => (session ? { authorization: `Bearer ${session}` } : {});
+
+async function post<T>(path: string, body: unknown): Promise<{ status: number; data: T }> {
+  const res = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json", ...authHeader() },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json().catch(() => ({}))) as T;
+  return { status: res.status, data };
+}
+
+/** Waits briefly for the dashboard to hand over a token if we're inside its iframe. */
+function tokenFromParent(ms: number): Promise<string | null> {
+  if (window.parent === window) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const done = (v: string | null) => {
+      window.removeEventListener("message", onMsg);
+      clearTimeout(timer);
+      resolve(v);
+    };
+    const onMsg = (e: MessageEvent) => {
+      const d = e.data as { type?: string; token?: string } | null;
+      if (d && d.type === "timber:identity" && typeof d.token === "string") done(d.token);
+    };
+    window.addEventListener("message", onMsg);
+    window.parent.postMessage({ type: "timber:ready" }, "*");
+    const timer = setTimeout(() => done(null), ms);
+  });
+}
+
+export async function connect(): Promise<{ player: Player; state: GameState; fresh: boolean; freeSpins: number } | null> {
+  const url = new URL(window.location.href);
+  const token = url.searchParams.get("t") ?? (await tokenFromParent(1500));
+  const devName = url.searchParams.get("dev");
+  if (token || devName) {
+    url.searchParams.delete("t");
+    window.history.replaceState(null, "", url.toString());
+  }
+  session = token || devName ? null : ls.get(SESSION_KEY);
+  try {
+    const { status, data } = await post<Hello>("/api/session", token ? { token } : devName ? { devName } : {});
+    if (status !== 200) {
+      session = null;
+      if (status === 401) ls.set(SESSION_KEY, null);
+      return null;
+    }
+    session = data.session;
+    rev = data.rev;
+    ls.set(SESSION_KEY, data.session);
+    return { player: data.player, state: normalize(data.state, Date.now()), fresh: data.fresh, freeSpins: data.freeSpins };
+  } catch {
+    session = null;
+    return null;
+  }
+}
+
+export type PushResult = { ok: true } | { ok: false; state?: GameState; reason?: string };
+
+export async function push(state: GameState, opts: { import?: boolean } = {}): Promise<PushResult> {
+  if (!session || saving) return { ok: true };
+  saving = true;
+  try {
+    const { status, data } = await post<{ rev: number; state?: unknown; reason?: string }>("/api/save", {
+      state,
+      rev,
+      import: opts.import,
+    });
+    if (status === 200) {
+      rev = data.rev;
+      return { ok: true };
+    }
+    if (status === 409 && data.state) {
+      rev = data.rev;
+      return { ok: false, state: normalize(data.state, Date.now()), reason: data.reason };
+    }
+    return { ok: false };
+  } catch {
+    return { ok: false };
+  } finally {
+    saving = false;
+  }
+}
+
+/** Fire-and-forget save for when the tab is closing. */
+export function pushBeacon(state: GameState) {
+  if (!session) return;
+  void fetch("/api/save", {
+    method: "POST",
+    keepalive: true,
+    headers: { "content-type": "application/json", ...authHeader() },
+    body: JSON.stringify({ state, rev }),
+  }).catch(() => {});
+}
+
+export const setRev = (r: number) => (rev = r);

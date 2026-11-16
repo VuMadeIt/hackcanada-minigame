@@ -54,7 +54,8 @@ export function checkSave(prev: Stored, incoming: unknown, now: number, opts: { 
   // that could have shown up in that time
   const dt = Math.max(1, (now - prev.savedAt) / 1000) + (opts.firstImport ? 3 * 3600 : 0);
   const base = Math.max(woodRateCeiling(p), woodRateCeiling(s)) / GOLDEN.frenzyMult;
-  const goldens = dt / (GOLDEN.minGapSec * 0.4) + 1;
+  const lucky = Math.max(p.upgrades.lucky_sapling ?? 0, s.upgrades.lucky_sapling ?? 0);
+  const goldens = dt / (GOLDEN.minGapSec * Math.max(0.2, 1 - GOLDEN.luckyGapCut * lucky)) + 1;
   const frenzyExtra = goldens * GOLDEN.frenzySec * base * (GOLDEN.frenzyMult - 1);
   const ceiling = base * dt * 1.25 + frenzyExtra + goldens * Math.max(pileSize(p, now), pileSize(s, now)) * 1.2 + 200;
   if (s.lifetimeWood - p.lifetimeWood > ceiling) return { ok: false, reason: "too_fast" };

@@ -180,3 +180,18 @@ export async function casinoInfo(): Promise<{ freeSpins: number; prizes: { name:
     return null;
   }
 }
+
+export interface Board {
+  top: { rank: number; name: string; wood: number; level: number; you: boolean }[];
+  me: { rank: number; name: string; wood: number; level: number } | null;
+  players: number;
+}
+
+export async function leaderboard(): Promise<Board | null> {
+  try {
+    const res = await fetch("/api/leaderboard", { headers: authHeader(), cache: "no-store" });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}

@@ -80,7 +80,14 @@ export async function connect(): Promise<{ player: Player; state: GameState; fre
     url.searchParams.delete("t");
     window.history.replaceState(null, "", url.toString());
   }
-  session = token || devName ? null : ls.get(SESSION_KEY);
+  // inside the dashboard, only trust a token it just handed us; a stored session could belong to
+  // whoever was logged in before
+  const embedded = window.parent !== window;
+  session = token || devName || embedded ? null : ls.get(SESSION_KEY);
+  if (embedded && !token && !devName) {
+    ls.set(SESSION_KEY, null);
+    return null;
+  }
   try {
     const { status, data } = await post<Hello>("/api/session", token ? { token } : devName ? { devName } : {});
     if (status !== 200) {

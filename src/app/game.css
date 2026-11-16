@@ -356,3 +356,35 @@
 }
 .who { font-size: 11px; font-weight: 700; color: var(--paper); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 760px) { .who { display: none; } }
+
+/* ---------- casino ---------- */
+.casino .panel-body { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.slot { position: relative; width: 240px; aspect-ratio: 120 / 127; margin-top: 4px; }
+.slot.flash { animation: pulse 0.15s 8 alternate; }
+.slot-img { width: 100%; height: 100%; image-rendering: pixelated; display: block; }
+.slot-img.dim { width: 160px; height: auto; filter: grayscale(0.7) brightness(0.8); }
+.reel { position: absolute; top: 36.2%; height: 26.8%; width: 18.5%; display: grid; place-items: center; overflow: hidden; }
+.reel.r0 { left: 10.8%; }
+.reel.r1 { left: 34.2%; }
+.reel.r2 { left: 58.3%; }
+.reel img { width: 84%; image-rendering: pixelated; }
+.reel.spinning img { animation: reelBlur 0.08s infinite; filter: blur(0.6px); }
+@keyframes reelBlur { from { translate: 0 -40%; } to { translate: 0 40%; } }
+.lever { position: absolute; right: 2%; top: 22%; width: 14%; height: 38%; background: none; border: none; cursor: pointer; }
+.slot-line { min-height: 22px; font-weight: 700; font-size: 16px; color: var(--wood-dk); text-align: center; }
+.slot-line.big { color: #c25a1c; font-size: 20px; animation: pulse 0.3s infinite alternate; }
+.slot-line.win { color: #2f7a2a; }
+.slot-line.lose { color: #7a5130; }
+.slot-line.err { color: var(--red); font-size: 14px; }
+.spin-btn { font-size: 18px; padding: 8px 22px 10px; }
+.casino-note, .casino-locked p { font-size: 13px; color: #6b4526; text-align: center; }
+.casino-locked { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+.paytable { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--wood-dk); }
+.paytable td { padding: 2px 4px; border-bottom: 2px dotted var(--paper-dk); }
+.paytable img { width: 18px; image-rendering: pixelated; vertical-align: middle; }
+.paytable .odds { text-align: right; color: #7a5130; }
+.paytable .any { font-style: italic; color: #7a5130; }
+.won { width: 100%; background: #fff4c2; border: 3px solid #e5a51f; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; }
+.won-row { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 13px; }
+.won-row code { font-weight: 700; background: var(--paper); padding: 0 4px; }
+.won-row small { color: #7a5130; width: 100%; }

@@ -8,6 +8,7 @@ import { fanfare, play, setMuted, unlockAudio } from "@/game/sound";
 import { newGame, normalize, type GameState } from "@/game/state";
 import { Fx } from "./fx";
 import * as Net from "./net";
+import { CasinoPanel } from "./CasinoPanel";
 import { Hud } from "./Hud";
 import { ShopPanel, shopBadge } from "./ShopPanel";
 import { spriteUrl } from "./sprites";
@@ -49,7 +50,7 @@ const LEAVES: Record<ZoneId, string[]> = {
 };
 const BG: Record<ZoneId, string> = { meadow: "bg/meadow", autumn: "bg/autumn", night: "bg/night" };
 
-type PanelId = null | "shop";
+type PanelId = null | "shop" | "casino";
 interface Banner {
   key: number;
   title: string;
@@ -98,6 +99,8 @@ export default function Game() {
   const [banner, setBanner] = useState<Banner | null>(null);
   const [golden, setGolden] = useState<Golden | null>(null);
   const [player, setPlayer] = useState<Net.Player | null>(null);
+  const [freeSpins, setFreeSpins] = useState(0);
+  const adoptRef = useRef<(ns: GameState, withOffline: boolean) => void>(() => {});
   const goldenRef = useRef<Golden | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const elsewhereRef = useRef(false);
@@ -181,9 +184,11 @@ export default function Game() {
       save();
       refresh();
     };
+    adoptRef.current = adopt;
     void Net.connect().then(async (hello) => {
       if (!alive || !hello) return;
       setPlayer(hello.player);
+      setFreeSpins(hello.freeSpins);
       const local = sRef.current!;
       const mine = hello.fresh || store.get(OWNER_KEY) === hello.player.id;
       store.set(OWNER_KEY, hello.player.id);
@@ -489,6 +494,7 @@ export default function Game() {
   const stump = s ? now < s.tree.regrowAt : false;
   const tool = s ? TOOLS[Math.min(s.tool, TOOLS.length - 1)] : TOOLS[0];
   const badge = s ? shopBadge(s) : 0;
+  const lvl = s ? E.levelFor(s.lifetimeWood) : 1;
 
   return (
     <div className={`game zone-${s?.zone ?? "meadow"} ${d && d.frenzy > 1 ? "frenzy-on" : ""}`}>
@@ -593,6 +599,20 @@ export default function Game() {
               <span>SHOP</span>
               {badge > 0 && <i className="badge">{badge}</i>}
             </PxButton>
+            <PxButton
+              tone="red"
+              className={`rail-btn ${panel === "casino" ? "on" : ""}`}
+              onClick={() => {
+                unlockAudio();
+                play("click");
+                setPanel(panel === "casino" ? null : "casino");
+              }}
+              data-testid="open-casino"
+            >
+              <Icon name="slots/seven" size={22} className={lvl < CASINO_UNLOCK_LEVEL ? "silhouette" : ""} />
+              <span>CASINO</span>
+              {lvl < CASINO_UNLOCK_LEVEL ? <small>Lv {CASINO_UNLOCK_LEVEL}</small> : freeSpins > 0 && <i className="badge">{freeSpins}</i>}
+            </PxButton>
             <div className="rail-spacer" />
             <button className="mute" onClick={toggleMute} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
               {muted ? "SFX off" : "SFX on"}
@@ -600,6 +620,22 @@ export default function Game() {
           </nav>
 
           {panel === "shop" && <ShopPanel s={s} now={now} onClose={() => setPanel(null)} act={shopActions} />}
+          {panel === "casino" && (
+            <CasinoPanel
+              s={s}
+              now={now}
+              freeSpins={freeSpins}
+              onClose={() => setPanel(null)}
+              onSpent={(bet, free) => {
+                if (!free && sRef.current) sRef.current.coins = Math.max(0, sRef.current.coins - bet);
+                refresh();
+              }}
+              onSettled={(r) => {
+                if (r.newState) adoptRef.current(r.newState, false);
+                if (typeof r.freeSpins === "number") setFreeSpins(r.freeSpins);
+              }}
+            />
+          )}
 
           {elsewhere && (
             <div className="modal-back">

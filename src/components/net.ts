@@ -144,3 +144,39 @@ export function pushBeacon(state: GameState) {
 }
 
 export const setRev = (r: number) => (rev = r);
+
+export interface SpinReply {
+  ok: boolean;
+  error?: string;
+  reason?: string;
+  state?: unknown;
+  rev?: number;
+  reels?: [string, string, string];
+  outcome?: string;
+  bet?: number;
+  free?: boolean;
+  reward?: { coins: number; wood: number; freeSpins: number; upgrade: { name: string } | null };
+  prize?: { name: string; code: string } | null;
+  freeSpins?: number;
+}
+
+export async function spin(state: GameState): Promise<SpinReply & { newState?: GameState }> {
+  if (!session) return { ok: false, error: "offline" };
+  try {
+    const { data } = await post<SpinReply>("/api/spin", { state, rev });
+    if (typeof data.rev === "number") rev = data.rev;
+    return { ...data, newState: data.state ? normalize(data.state, Date.now()) : undefined };
+  } catch {
+    return { ok: false, error: "network" };
+  }
+}
+
+export async function casinoInfo(): Promise<{ freeSpins: number; prizes: { name: string; code: string; redeemed: boolean }[] } | null> {
+  if (!session) return null;
+  try {
+    const res = await fetch("/api/casino", { headers: authHeader() });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}

@@ -15,17 +15,27 @@ const CASINO_KEY = "timber-demo-casino";
 type Prize = { name: string; code: string; redeemed: boolean };
 type Casino = { freeSpins: number; prizes: Prize[] };
 
+// copy in memory too, so a browser that blocks storage still keeps spins and prizes until reload
+const mem = new Map<string, string>();
+
 const read = <T>(k: string, fallback: T): T => {
+  let v: string | null | undefined = mem.get(k);
   try {
-    const v = localStorage.getItem(k);
+    v = localStorage.getItem(k) ?? v;
+  } catch {
+    // storage blocked: fall back to the in-memory copy
+  }
+  try {
     return v ? (JSON.parse(v) as T) : fallback;
   } catch {
     return fallback;
   }
 };
 const write = (k: string, v: unknown) => {
+  const s = JSON.stringify(v);
+  mem.set(k, s);
   try {
-    localStorage.setItem(k, JSON.stringify(v));
+    localStorage.setItem(k, s);
   } catch {
     // storage blocked: the demo still runs, it just forgets on reload
   }

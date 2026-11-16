@@ -1,4 +1,4 @@
-import { and, desc, gt, lt, sql } from "drizzle-orm";
+import { and, desc, eq, gt, lt, or, sql } from "drizzle-orm";
 import { db, hasDb } from "@/server/db";
 import { json } from "@/server/http";
 import { identityFromRequest } from "@/server/identity";
@@ -34,7 +34,8 @@ export async function GET(req: Request) {
       const [{ ahead }] = await db()
         .select({ ahead: sql<number>`count(*)::int` })
         .from(players)
-        .where(and(honest, gt(players.lifetimeWood, row.wood)));
+        // ties go to whoever started first, matching the top list's order
+        .where(and(honest, or(gt(players.lifetimeWood, row.wood), and(eq(players.lifetimeWood, row.wood), lt(players.createdAt, row.createdAt)))));
       me = { rank: ahead + 1, name: row.name, wood: row.wood, level: row.level };
     }
   }

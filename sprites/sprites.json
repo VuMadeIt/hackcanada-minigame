@@ -1,0 +1,202 @@
+{
+  "beaver/golden": {
+    "h": 45,
+    "w": 56
+  },
+  "beaver/mascot": {
+    "h": 85,
+    "w": 72
+  },
+  "bg/autumn": {
+    "h": 256,
+    "w": 384
+  },
+  "bg/meadow": {
+    "h": 256,
+    "w": 384
+  },
+  "bg/night": {
+    "h": 256,
+    "w": 384
+  },
+  "casino/slot": {
+    "h": 127,
+    "w": 120
+  },
+  "currency/coin": {
+    "h": 25,
+    "w": 24
+  },
+  "currency/log": {
+    "h": 22,
+    "w": 24
+  },
+  "paw/chainsaw": {
+    "h": 83,
+    "w": 84
+  },
+  "paw/copper": {
+    "h": 86,
+    "w": 84
+  },
+  "paw/diamond": {
+    "h": 86,
+    "w": 84
+  },
+  "paw/gold": {
+    "h": 86,
+    "w": 84
+  },
+  "paw/iridium": {
+    "h": 86,
+    "w": 84
+  },
+  "paw/rusty": {
+    "h": 86,
+    "w": 84
+  },
+  "paw/steel": {
+    "h": 86,
+    "w": 84
+  },
+  "shop/beaver_worker": {
+    "h": 34,
+    "w": 32
+  },
+  "shop/cargo_ship": {
+    "h": 39,
+    "w": 32
+  },
+  "shop/fertilizer": {
+    "h": 39,
+    "w": 32
+  },
+  "shop/furniture_shop": {
+    "h": 34,
+    "w": 32
+  },
+  "shop/gnome": {
+    "h": 50,
+    "w": 32
+  },
+  "shop/golden_tree": {
+    "h": 40,
+    "w": 32
+  },
+  "shop/log_splitter": {
+    "h": 30,
+    "w": 32
+  },
+  "shop/lumberjack": {
+    "h": 42,
+    "w": 32
+  },
+  "shop/money_bag": {
+    "h": 41,
+    "w": 32
+  },
+  "shop/paper_mill": {
+    "h": 44,
+    "w": 32
+  },
+  "shop/robot_arm": {
+    "h": 40,
+    "w": 32
+  },
+  "shop/saw_blade": {
+    "h": 33,
+    "w": 32
+  },
+  "shop/sawmill": {
+    "h": 34,
+    "w": 32
+  },
+  "shop/skyscraper": {
+    "h": 49,
+    "w": 32
+  },
+  "shop/syrup_factory": {
+    "h": 41,
+    "w": 32
+  },
+  "shop/trophy": {
+    "w": 16,
+    "h": 16
+  },
+  "shop/watering_can": {
+    "h": 30,
+    "w": 32
+  },
+  "slots/beaver": {
+    "h": 30,
+    "w": 28
+  },
+  "slots/coin": {
+    "h": 29,
+    "w": 28
+  },
+  "slots/gem": {
+    "h": 26,
+    "w": 28
+  },
+  "slots/leaf": {
+    "h": 30,
+    "w": 28
+  },
+  "slots/log": {
+    "h": 26,
+    "w": 28
+  },
+  "slots/seven": {
+    "h": 29,
+    "w": 28
+  },
+  "tools/chainsaw": {
+    "h": 30,
+    "w": 32
+  },
+  "tools/copper": {
+    "h": 52,
+    "w": 32
+  },
+  "tools/diamond": {
+    "h": 51,
+    "w": 32
+  },
+  "tools/gold": {
+    "h": 51,
+    "w": 32
+  },
+  "tools/iridium": {
+    "h": 51,
+    "w": 32
+  },
+  "tools/rusty": {
+    "h": 41,
+    "w": 32
+  },
+  "tools/steel": {
+    "h": 51,
+    "w": 32
+  },
+  "tree/ancient": {
+    "h": 157,
+    "w": 130
+  },
+  "tree/birch": {
+    "h": 156,
+    "w": 104
+  },
+  "tree/maple": {
+    "h": 152,
+    "w": 120
+  },
+  "tree/oak": {
+    "h": 132,
+    "w": 120
+  },
+  "tree/stump": {
+    "h": 59,
+    "w": 72
+  }
+}

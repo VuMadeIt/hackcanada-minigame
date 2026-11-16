@@ -107,7 +107,8 @@ function shop(s: GameState, now: number, p: Persona, log: (what: string) => void
     if (!pick.go()) break;
     log(pick.label);
   }
-  for (const z of [...ZONES].reverse()) if (E.setZone(s, z.id, now)) break;
+  const best = [...ZONES].reverse().find((z) => E.levelFor(s.lifetimeWood) >= z.unlockLevel);
+  if (best && best.id !== s.zone) E.setZone(s, best.id, now);
 }
 
 const fmtT = (sec: number) => (sec < 120 ? `${Math.round(sec)}s` : sec < 3600 ? `${Math.round(sec / 60)}m` : `${(sec / 3600).toFixed(1)}h`);

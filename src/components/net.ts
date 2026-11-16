@@ -211,13 +211,15 @@ export async function leaderboard(): Promise<Board | null> {
 export type BoostKind = "casino" | "coins" | "spins";
 
 /** Test-server only: unlock the casino, add coins or free spins. */
-export async function boost(what: BoostKind): Promise<{ state: GameState; freeSpins: number } | null> {
+export async function boost(what: BoostKind): Promise<{ state: GameState; freeSpins: number; added: { coins: number; wood: number } } | null> {
   if (!session) return null;
   try {
-    const { status, data } = await post<{ state?: unknown; rev?: number; freeSpins?: number }>("/api/dev/boost", { what });
+    const { status, data } = await post<{ state?: unknown; rev?: number; freeSpins?: number; added?: { coins: number; wood: number } }>("/api/dev/boost", {
+      what,
+    });
     if (status !== 200 || !data.state || typeof data.rev !== "number") return null;
     rev = data.rev;
-    return { state: normalize(data.state, Date.now()), freeSpins: data.freeSpins ?? 0 };
+    return { state: normalize(data.state, Date.now()), freeSpins: data.freeSpins ?? 0, added: data.added ?? { coins: 0, wood: 0 } };
   } catch {
     return null;
   }

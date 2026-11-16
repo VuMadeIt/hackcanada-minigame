@@ -600,18 +600,27 @@ export default function Game() {
     async (what: Net.BoostKind) => {
       if (spinning.current) return;
       spinning.current = true;
+      // save first so the server's copy is current, then add only what the boost gave,
+      // the same way a spin result is merged
+      const pushed = await Net.push(sRef.current!);
+      if (!pushed.ok && pushed.state) adoptRef.current(pushed.state, false);
       const r = await Net.boost(what);
       spinning.current = false;
       if (!r) {
         play("deny");
         return;
       }
-      adoptRef.current(r.state, false);
+      const cur = sRef.current!;
+      cur.coins += r.added.coins;
+      cur.wood += r.added.wood;
+      cur.lifetimeWood += r.added.wood;
+      save();
+      refresh();
       setFreeSpins(r.freeSpins);
       if (what === "casino") fanfare();
       else play("coin");
     },
-    [],
+    [save, refresh],
   );
 
   // ---------- render ----------

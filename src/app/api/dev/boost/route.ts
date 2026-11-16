@@ -24,13 +24,14 @@ export async function POST(req: Request) {
     const now = Date.now();
     const s = rowState(row);
     let coins = 0;
+    let wood = 0;
     let spins = 0;
     if (what === "casino") {
       const need = xpForLevel(CASINO_UNLOCK_LEVEL) + 1;
       if (s.lifetimeWood < need) {
-        const add = need - s.lifetimeWood;
-        s.lifetimeWood += add;
-        s.wood += add;
+        wood = need - s.lifetimeWood;
+        s.lifetimeWood += wood;
+        s.wood += wood;
       }
       coins = spinCost(s, now) * 20;
     } else if (what === "coins") coins = spinCost(s, now) * 20;
@@ -50,6 +51,6 @@ export async function POST(req: Request) {
       })
       .where(eq(players.id, who.id))
       .returning({ rev: players.rev, freeSpins: players.freeSpins });
-    return json({ state: s, rev: saved.rev, freeSpins: saved.freeSpins });
+    return json({ state: s, rev: saved.rev, freeSpins: saved.freeSpins, added: { coins, wood } });
   });
 }

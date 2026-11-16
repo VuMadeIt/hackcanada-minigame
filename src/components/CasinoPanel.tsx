@@ -7,6 +7,7 @@ import { levelFor } from "@/game/engine";
 import { fmt } from "@/game/format";
 import type { GameState } from "@/game/state";
 import { fanfare, play } from "@/game/sound";
+import { DEMO } from "./demo";
 import * as Net from "./net";
 import { spriteUrl } from "./sprites";
 import { Icon, Panel, PxButton } from "./ui";
@@ -186,7 +187,7 @@ export function CasinoPanel({
             <button className="lever" onClick={pull} disabled={busy} aria-label="Pull the lever" />
           </div>
           <div className={`slot-line ${line?.tone ?? ""}`} data-testid="slot-line">
-            {line?.text ?? (busy ? "..." : "Three 7s wins a real prize.")}
+            {line?.text ?? (busy ? "..." : DEMO ? "Three 7s wins a pretend prize. This is a demo." : "Three 7s wins a real prize.")}
           </div>
           <PxButton tone="red" className="spin-btn" onClick={pull} disabled={busy || !signedIn} data-testid="spin">
             {freeSpins > 0 ? (
@@ -226,7 +227,7 @@ export function CasinoPanel({
                 <div key={p.code} className="won-row">
                   <span>{p.name}</span>
                   <code>{p.code}</code>
-                  <small>{p.redeemed ? "picked up" : "show this at the prize desk"}</small>
+                  <small>{DEMO ? "demo only, not a real prize" : p.redeemed ? "picked up" : "show this at the prize desk"}</small>
                 </div>
               ))}
             </div>

@@ -1,5 +1,6 @@
 import { normalize, type GameState } from "@/game/state";
 import type { UpgradeId } from "@/game/config";
+import * as Demo from "./demo";
 
 // Talks to /api. Everything still works without it; you just play on a local save.
 
@@ -83,6 +84,14 @@ function tokenFromParent(ms: number): Promise<string | null> {
 export type Connected = { player: Player; state: GameState; fresh: boolean; freeSpins: number };
 
 export async function connect(pickedName?: string): Promise<Connected | null> {
+  if (Demo.DEMO) {
+    const p = Demo.player(pickedName);
+    devLogin = true;
+    if (!p) return null;
+    session = "demo";
+    testTools = true;
+    return { player: p, state: normalize(null, Date.now()), fresh: true, freeSpins: Demo.casinoInfo().freeSpins };
+  }
   const url = new URL(window.location.href);
   const token = pickedName ? null : (url.searchParams.get("t") ?? (await tokenFromParent(1500)));
   const devName = pickedName ?? url.searchParams.get("dev");
@@ -121,6 +130,10 @@ export type PushResult = { ok: true } | { ok: false; state?: GameState; reason?:
 
 export async function push(state: GameState, opts: { import?: boolean } = {}): Promise<PushResult> {
   if (!session || saving) return { ok: true };
+  if (Demo.DEMO) {
+    Demo.remember(state);
+    return { ok: true };
+  }
   saving = true;
   try {
     const { status, data } = await post<{ rev: number; state?: unknown; reason?: string }>("/api/save", {
@@ -146,7 +159,7 @@ export async function push(state: GameState, opts: { import?: boolean } = {}): P
 
 /** Fire-and-forget save for when the tab is closing. */
 export function pushBeacon(state: GameState) {
-  if (!session) return;
+  if (!session || Demo.DEMO) return;
   void fetch("/api/save", {
     method: "POST",
     keepalive: true,
@@ -174,6 +187,10 @@ export interface SpinReply {
 
 export async function spin(state: GameState): Promise<SpinReply & { newState?: GameState }> {
   if (!session) return { ok: false, error: "offline" };
+  if (Demo.DEMO) {
+    const r = Demo.spin(state);
+    return r.ok ? { ...r, newState: r.state } : r;
+  }
   try {
     const { data } = await post<SpinReply>("/api/spin", { state, rev });
     if (typeof data.rev === "number") rev = data.rev;
@@ -185,6 +202,7 @@ export async function spin(state: GameState): Promise<SpinReply & { newState?: G
 
 export async function casinoInfo(): Promise<{ freeSpins: number; prizes: { name: string; code: string; redeemed: boolean }[] } | null> {
   if (!session) return null;
+  if (Demo.DEMO) return Demo.casinoInfo();
   try {
     const res = await fetch("/api/casino", { headers: authHeader() });
     return res.ok ? await res.json() : null;
@@ -200,6 +218,7 @@ export interface Board {
 }
 
 export async function leaderboard(): Promise<Board | null> {
+  if (Demo.DEMO) return Demo.leaderboard();
   try {
     const res = await fetch("/api/leaderboard", { headers: authHeader(), cache: "no-store" });
     return res.ok ? await res.json() : null;
@@ -213,6 +232,10 @@ export type BoostKind = "casino" | "coins" | "spins";
 /** Test-server only: unlock the casino, add coins or free spins. */
 export async function boost(what: BoostKind): Promise<{ state: GameState; freeSpins: number; added: { coins: number; wood: number } } | null> {
   if (!session) return null;
+  if (Demo.DEMO) {
+    const r = Demo.boost(what);
+    return r && { ...r, state: normalize(null, Date.now()) };
+  }
   try {
     const { status, data } = await post<{ state?: unknown; rev?: number; freeSpins?: number; added?: { coins: number; wood: number } }>("/api/dev/boost", {
       what,

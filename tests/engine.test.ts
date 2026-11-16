@@ -146,6 +146,29 @@ describe("market and passive income", () => {
     expect(r.autoChops.length).toBe(3);
   });
 
+  it("keeps every auto-chop when one of them fells the tree", () => {
+    const s = newGame(0);
+    s.upgrades.robo_arm = 5;
+    s.tree.hp = 0.1;
+    const r = tick(s, 1, 0, never);
+    expect(r.autoChops.length).toBe(5);
+    expect(r.autoChops[0].felled).toBe(true);
+  });
+
+  it("gnome sells the same share in one long tick as in many short ones", () => {
+    const a = newGame(0);
+    const b = newGame(0);
+    for (const s of [a, b]) {
+      s.upgrades.gnome = 1;
+      s.wood = 1000;
+      s.lifetimeWood = 1000;
+    }
+    tick(a, 100, 0, never);
+    for (let i = 0; i < 100; i++) tick(b, 1, 0, never);
+    expect(a.wood).toBeGreaterThan(0);
+    expect(a.wood).toBeCloseTo(b.wood, 6);
+  });
+
   it("pays half of passive income while away, capped at 8 hours", () => {
     const s = newGame(0);
     s.buildings.lumberjack = 4;

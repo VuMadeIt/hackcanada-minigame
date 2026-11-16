@@ -130,7 +130,8 @@ export interface ChopResult {
 }
 
 export function chop(s: GameState, now: number, rng: Rng, auto = false): ChopResult | null {
-  if (now < s.tree.regrowAt) return null;
+  // the stump pause is only for your own clicks; helpers just start on the next tree
+  if (!auto && now < s.tree.regrowAt) return null;
   const before = levelFor(s.lifetimeWood);
 
   if (!auto) {
@@ -212,7 +213,8 @@ export function tick(s: GameState, dtSec: number, now: number, rng: Rng): TickRe
 
   let gnomeCoins = 0;
   if (d.gnomeShare > 0 && s.wood > 0) {
-    const w = s.wood * Math.min(1, d.gnomeShare * dtSec);
+    // continuous rate, so one long catch-up tick sells the same share as many short ones
+    const w = s.wood * (1 - Math.exp(-d.gnomeShare * dtSec));
     gnomeCoins = sellAmount(s, now, w);
   }
 

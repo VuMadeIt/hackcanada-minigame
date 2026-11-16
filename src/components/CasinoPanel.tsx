@@ -74,7 +74,10 @@ export function CasinoPanel({
   const canPay = freeSpins > 0 || s.coins >= cost;
 
   useEffect(() => {
-    void Net.casinoInfo().then((i) => i && setWon(i.prizes));
+    if (signedIn) void Net.casinoInfo().then((i) => i && setWon(i.prizes));
+  }, [signedIn]);
+
+  useEffect(() => {
     const t = timers.current;
     mounted.current = true;
     return () => {

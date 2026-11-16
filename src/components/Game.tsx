@@ -101,6 +101,8 @@ export default function Game() {
   const [player, setPlayer] = useState<Net.Player | null>(null);
   const [freeSpins, setFreeSpins] = useState(0);
   const adoptRef = useRef<(ns: GameState, withOffline: boolean) => void>(() => {});
+  // a save sent while the reels spin would race the spin's own save on the server
+  const spinning = useRef(false);
   const goldenRef = useRef<Golden | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const elsewhereRef = useRef(false);
@@ -278,7 +280,7 @@ export default function Game() {
         lastSave = t;
         save();
       }
-      if (t - lastPush > 20000 && Net.signedIn()) {
+      if (t - lastPush > 20000 && Net.signedIn() && !spinning.current) {
         lastPush = t;
         void Net.push(st).then((r) => {
           if (!r.ok && r.state && alive) adopt(r.state, false);
@@ -296,7 +298,7 @@ export default function Game() {
     const onHide = () => {
       if (!document.hidden) return;
       save();
-      void Net.push(sRef.current!);
+      if (!spinning.current) void Net.push(sRef.current!);
     };
     const onLeave = () => {
       save();
@@ -630,8 +632,21 @@ export default function Game() {
                 if (!free && sRef.current) sRef.current.coins = Math.max(0, sRef.current.coins - bet);
                 refresh();
               }}
+              onStart={() => (spinning.current = true)}
               onSettled={(r) => {
-                if (r.newState) adoptRef.current(r.newState, false);
+                spinning.current = false;
+                const cur = sRef.current;
+                if (r.ok && r.newState && cur) {
+                  // keep what was chopped while the reels spun; add only what the spin changed
+                  const won = r.reward?.wood ?? 0;
+                  cur.coins += r.reward?.coins ?? 0;
+                  cur.wood += won;
+                  cur.lifetimeWood += won;
+                  cur.upgrades = { ...r.newState.upgrades };
+                  cur.stats.spins = r.newState.stats.spins;
+                  save();
+                  refresh();
+                } else if (r.newState) adoptRef.current(r.newState, false);
                 if (typeof r.freeSpins === "number") setFreeSpins(r.freeSpins);
               }}
             />

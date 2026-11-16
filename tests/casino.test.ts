@@ -13,7 +13,7 @@ function seeded(seed: number) {
 }
 
 describe("slot machine", () => {
-  it("hits 777 five percent of the time", () => {
+  it("hits 777 three percent of the time, rarer than anything else", () => {
     const rng = seeded(7);
     const n = 200_000;
     let jackpots = 0;
@@ -23,8 +23,10 @@ describe("slot machine", () => {
       counts[r.outcome] = (counts[r.outcome] ?? 0) + 1;
       if (r.outcome === "jackpot") jackpots++;
     }
-    expect(jackpots / n).toBeGreaterThan(0.047);
-    expect(jackpots / n).toBeLessThan(0.053);
+    expect(jackpots / n).toBeGreaterThan(0.028);
+    expect(jackpots / n).toBeLessThan(0.032);
+    const jackpot = ODDS.find((o) => o.outcome === "jackpot")!.p;
+    for (const o of ODDS) if (o.outcome !== "jackpot") expect(o.p).toBeGreaterThan(jackpot);
     expect(counts.pair / n).toBeCloseTo(PAIR_ODDS, 2);
     for (const o of ODDS) expect(counts[o.outcome] / n).toBeCloseTo(o.p, 2);
   });
@@ -80,7 +82,7 @@ describe("slot machine", () => {
     for (const u of UPGRADES) maxed.upgrades[u.id] = u.max;
     const r2 = applyOutcome(maxed, "upgrade", 100, 0, seeded(5));
     expect(r2.upgrade).toBeNull();
-    expect(r2.coins).toBe(100 * PAYOUT.coins);
+    expect(r2.coins).toBe(100 * PAYOUT.leaves);
   });
 
   it("never hands out an upgrade worth more than a few bets", () => {
@@ -89,16 +91,18 @@ describe("slot machine", () => {
       s.lifetimeWood = 5e7;
       const r = applyOutcome(s, "upgrade", 10, 0, seeded(i));
       if (r.upgrade) expect(r.upgrade.value).toBeLessThanOrEqual(10 * PAYOUT.upgradeCap);
-      else expect(r.coins).toBe(10 * PAYOUT.coins);
+      else expect(r.coins).toBe(10 * PAYOUT.leaves);
     }
   });
 
-  it("makes spins cost more as your income grows", () => {
+  it("prices spins off your axe, not your buildings", () => {
     const s = newGame(0);
     const early = spinCost(s, 0);
+    expect(early).toBeGreaterThanOrEqual(50);
     s.coins = 1e12;
     for (let i = 0; i < 40; i++) buyBuilding(s, "beaver");
+    expect(spinCost(s, 0)).toBe(early);
+    s.tool = 3;
     expect(spinCost(s, 0)).toBeGreaterThan(early);
-    expect(early).toBeGreaterThanOrEqual(50);
   });
 });

@@ -9,14 +9,14 @@ export type Outcome = "jackpot" | "coins" | "wood" | "leaves" | "spins" | "upgra
 
 // chance per spin; whatever's left over is a miss
 export const ODDS: { outcome: Exclude<Outcome, "pair" | "miss">; sym: Sym; p: number }[] = [
-  { outcome: "jackpot", sym: "seven", p: 0.05 },
-  { outcome: "upgrade", sym: "gem", p: 0.03 },
-  { outcome: "spins", sym: "beaver", p: 0.04 },
-  { outcome: "leaves", sym: "leaf", p: 0.05 },
-  { outcome: "coins", sym: "coin", p: 0.06 },
-  { outcome: "wood", sym: "log", p: 0.08 },
+  { outcome: "jackpot", sym: "seven", p: 0.03 },
+  { outcome: "upgrade", sym: "gem", p: 0.035 },
+  { outcome: "spins", sym: "beaver", p: 0.045 },
+  { outcome: "leaves", sym: "leaf", p: 0.055 },
+  { outcome: "coins", sym: "coin", p: 0.065 },
+  { outcome: "wood", sym: "log", p: 0.085 },
 ];
-export const PAIR_ODDS = 0.2;
+export const PAIR_ODDS = 0.13;
 
 export const PAYOUT = {
   coins: 5, // x bet
@@ -24,17 +24,19 @@ export const PAYOUT = {
   pair: 1, // money back
   wood: 3, // x bet, paid as wood at the base price
   freeSpins: 2,
-  upgradeCap: 4, // the free upgrade is never worth more than this many bets
+  upgradeCap: 3, // the free upgrade is never worth more than this many bets
   jackpotFallback: 10, // x bet, when the prize shelf is empty
 };
 
 export const casinoOpen = (s: GameState) => levelFor(s.lifetimeWood) >= CASINO_UNLOCK_LEVEL;
 
-/** About a minute of what you'd make chopping and selling, rounded to something friendly. */
+// a spin costs this many chops of wood at the current axe, so 3 hours of chopping pays for about 4 spins
+export const CHOPS_PER_SPIN = 60_000;
+
+/** Priced off your axe, not your buildings, so it climbs with you instead of running away. */
 export function spinCost(s: GameState, now: number): number {
   const d = derive(s, now);
-  const woodPerSec = d.passive + d.autoChopsPerSec * d.chopPower * 0.5 + 4 * d.chopPower;
-  const raw = Math.max(50, woodPerSec * 60 * d.priceBase);
+  const raw = Math.max(50, d.chopPower * d.priceBase * CHOPS_PER_SPIN);
   const mag = 10 ** Math.floor(Math.log10(raw));
   return Math.ceil(raw / (mag / 2)) * (mag / 2);
 }
@@ -90,7 +92,7 @@ export function applyOutcome(s: GameState, outcome: Outcome, bet: number, now: n
       const have = s.upgrades[u.id] ?? 0;
       r.upgrade = { id: u.id, name: u.name, value: upgradeCost(u.id, have) };
       s.upgrades[u.id] = have + 1;
-    } else r.coins = bet * PAYOUT.coins;
+    } else r.coins = bet * PAYOUT.leaves;
   }
   s.coins += r.coins;
   s.wood += r.wood;

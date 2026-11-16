@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buyBuilding, chop, sell, tick } from "@/game/engine";
+import { buyBuilding, chop, sell, tick, woodRateCeiling } from "@/game/engine";
 import { newGame, type GameState } from "@/game/state";
 import { cleanName, fromDevName, signToken, verifyToken } from "@/server/identity";
 import { checkSave, type Stored } from "@/server/validate";
@@ -75,6 +75,22 @@ describe("checkSave", () => {
     const { s, t } = play(30);
     const older = newGame(0);
     expect(checkSave(stored(s, t), older, t + 1000)).toEqual({ ok: false, reason: "went_backwards" });
+  });
+
+  it("rejects a frenzy that never ends", () => {
+    const { s, t } = play(30);
+    s.frenzyUntil = t + 3600_000;
+    expect(checkSave(stored(newGame(0), 0), s, t)).toEqual({ ok: false, reason: "bad_timer" });
+  });
+
+  it("doesn't allow frenzy-speed wood for a whole hour", () => {
+    const { s, t } = play(60);
+    const prev = stored(s, t);
+    const later = structuredClone(s);
+    const hourly = (woodRateCeiling(s) / 1) * 3600;
+    later.lifetimeWood += hourly * 0.9;
+    later.wood += hourly * 0.9;
+    expect(checkSave(prev, later, t + 3600_000)).toEqual({ ok: false, reason: "too_fast" });
   });
 
   it("rejects zones you haven't unlocked", () => {

@@ -46,11 +46,17 @@ export function checkSave(prev: Stored, incoming: unknown, now: number, opts: { 
     return { ok: false, reason: "spent_mismatch" };
   }
 
-  // speed limit
+  // a frenzy only comes from catching a golden beaver, so it can't run longer than one does
+  const maxBuffAt = now + Math.max(GOLDEN.frenzySec, GOLDEN.stormSec) * 1000 + 5000;
+  if (s.frenzyUntil > maxBuffAt || s.stormUntil > maxBuffAt) return { ok: false, reason: "bad_timer" };
+
+  // speed limit: perfect play without frenzy, plus a frenzy and a log pile from every golden beaver
+  // that could have shown up in that time
   const dt = Math.max(1, (now - prev.savedAt) / 1000) + (opts.firstImport ? 3 * 3600 : 0);
-  const rate = Math.max(woodRateCeiling(p), woodRateCeiling(s));
+  const base = Math.max(woodRateCeiling(p), woodRateCeiling(s)) / GOLDEN.frenzyMult;
   const goldens = dt / (GOLDEN.minGapSec * 0.4) + 1;
-  const ceiling = rate * dt * 1.25 + goldens * Math.max(pileSize(p, now), pileSize(s, now)) * 1.2 + 200;
+  const frenzyExtra = goldens * GOLDEN.frenzySec * base * (GOLDEN.frenzyMult - 1);
+  const ceiling = base * dt * 1.25 + frenzyExtra + goldens * Math.max(pileSize(p, now), pileSize(s, now)) * 1.2 + 200;
   if (s.lifetimeWood - p.lifetimeWood > ceiling) return { ok: false, reason: "too_fast" };
 
   return { ok: true, state: s };

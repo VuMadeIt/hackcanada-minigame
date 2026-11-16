@@ -10,7 +10,7 @@ import { PRIZE_SHELF } from "./prizes";
 import { players, prizeClaims, prizes, spins } from "./schema";
 import { checkSave } from "./validate";
 
-const rng = () => randomInt(0, 2 ** 48) / 2 ** 48;
+const rng = () => randomInt(0, 2 ** 47) / 2 ** 47;
 
 export type SpinResult =
   | { ok: true; state: GameState; rev: number; reels: [Sym, Sym, Sym]; outcome: Outcome; bet: number; free: boolean; reward: Reward; prize: { name: string; code: string } | null; freeSpins: number }

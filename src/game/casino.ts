@@ -1,5 +1,5 @@
-import { CASINO_UNLOCK_LEVEL, UPGRADES, type UpgradeId } from "./config";
-import { derive, levelFor, upgradeCost, type Rng } from "./engine";
+import { CASINO_UNLOCK_LEVEL, CHOP, UPGRADES, type UpgradeId } from "./config";
+import { derive, levelFor, upgradeCost, type Derived, type Rng } from "./engine";
 import type { GameState } from "./state";
 
 export type Sym = "seven" | "coin" | "log" | "leaf" | "beaver" | "gem";
@@ -30,15 +30,20 @@ export const PAYOUT = {
 
 export const casinoOpen = (s: GameState) => levelFor(s.lifetimeWood) >= CASINO_UNLOCK_LEVEL;
 
-// a spin costs this many chops of wood at the current axe, so 3 hours of chopping pays for about 4 spins
-export const CHOPS_PER_SPIN = 60_000;
+// passive income alone (buildings and helpers) pays for about 4 spins an hour
+export const PASSIVE_SEC_PER_SPIN = 15 * 60;
+// floor for when you barely own anything yet
+export const MIN_CHOPS_PER_SPIN = 300;
 
-/** Priced off your axe, not your buildings, so it climbs with you instead of running away. */
+export const passiveWoodPerSec = (d: Derived) => d.passive + d.autoChopsPerSec * d.chopPower * CHOP.autoChopShare;
+
+/** About 15 minutes of passive income. Chopping faster doesn't change the price. */
 export function spinCost(s: GameState, now: number): number {
   const d = derive(s, now);
-  const raw = Math.max(50, d.chopPower * d.priceBase * CHOPS_PER_SPIN);
-  const mag = 10 ** Math.floor(Math.log10(raw));
-  return Math.ceil(raw / (mag / 2)) * (mag / 2);
+  const raw = Math.max(50, passiveWoodPerSec(d) * PASSIVE_SEC_PER_SPIN * d.priceBase, d.chopPower * d.priceBase * MIN_CHOPS_PER_SPIN);
+  // two significant figures, so the price reads nicely
+  const step = 10 ** Math.floor(Math.log10(raw)) / 10;
+  return Math.ceil(raw / step) * step;
 }
 
 export function roll(rng: Rng): { outcome: Outcome; reels: [Sym, Sym, Sym] } {

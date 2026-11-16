@@ -560,6 +560,11 @@ export default function Game() {
           </main>
 
           <nav className="rail">
+            {player && (
+              <div className="who" title={`Signed in as ${player.name}`}>
+                {player.name}
+              </div>
+            )}
             <PxButton ref={sellRef} tone="green" className="rail-btn sell" onClick={() => doSell(1)} data-testid="sell">
               <Icon name="currency/coin" size={22} />
               <span>SELL</span>

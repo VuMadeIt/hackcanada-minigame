@@ -38,6 +38,7 @@ export function CasinoPanel({
   now,
   freeSpins,
   onClose,
+  onStart,
   onSpent,
   onSettled,
 }: {
@@ -45,6 +46,7 @@ export function CasinoPanel({
   now: number;
   freeSpins: number;
   onClose: () => void;
+  onStart: () => void;
   onSpent: (bet: number, free: boolean) => void;
   onSettled: (r: Net.SpinReply & { newState?: GameState }) => void;
 }) {
@@ -94,6 +96,7 @@ export function CasinoPanel({
       play("reel", 1, 60);
     }, 80);
     const started = Date.now();
+    onStart();
     const r = await Net.spin(s);
     if (r.ok) onSpent(r.bet ?? 0, !!r.free);
     if (!mounted.current) {

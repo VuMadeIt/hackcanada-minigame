@@ -148,7 +148,7 @@ export function CasinoPanel({
               const lose = r.outcome === "miss";
               setLine({ text: LINES[r.outcome ?? "miss"](r), tone: lose ? "lose" : big ? "big" : "win" });
               if (lose) play("lose");
-              else if (big) fanfare();
+              else if (big) fanfare(undefined, undefined, "casino");
               else play("win");
               if (r.prize) setWon((w) => [{ ...r.prize!, redeemed: false }, ...w]);
             }

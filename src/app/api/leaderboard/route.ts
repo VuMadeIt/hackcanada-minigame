@@ -26,15 +26,16 @@ export async function GET(req: Request) {
   const who = identityFromRequest(req);
   if (who) {
     const [row] = await db()
-      .select({ wood: players.lifetimeWood, level: players.level, name: players.name })
+      .select({ wood: players.lifetimeWood, level: players.level, name: players.name, flags: players.flags, createdAt: players.createdAt })
       .from(players)
       .where(sql`${players.id} = ${who.id}`);
-    if (row) {
+    // same rules as the top list, so you never get a rank the board doesn't show
+    if (row && row.flags < FLAG_LIMIT && row.wood > 0) {
       const [{ ahead }] = await db()
         .select({ ahead: sql<number>`count(*)::int` })
         .from(players)
         .where(and(honest, gt(players.lifetimeWood, row.wood)));
-      me = { rank: ahead + 1, ...row };
+      me = { rank: ahead + 1, name: row.name, wood: row.wood, level: row.level };
     }
   }
   return json({ top: top.map(({ id, ...p }, i) => ({ rank: i + 1, ...p, you: id === who?.id })), me, players: n });

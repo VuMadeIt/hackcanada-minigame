@@ -15,7 +15,7 @@ export async function GET(req: Request) {
     .select({ id: players.id, name: players.name, wood: players.lifetimeWood, level: players.level })
     .from(players)
     .where(and(honest, gt(players.lifetimeWood, 0)))
-    .orderBy(desc(players.lifetimeWood), players.createdAt)
+    .orderBy(desc(players.lifetimeWood), players.createdAt, players.id)
     .limit(TOP);
   const [{ n }] = await db()
     .select({ n: sql<number>`count(*)::int` })
@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const who = identityFromRequest(req);
   if (who) {
     const [row] = await db()
-      .select({ wood: players.lifetimeWood, level: players.level, name: players.name, flags: players.flags, createdAt: players.createdAt })
+      .select({ wood: players.lifetimeWood, level: players.level, name: players.name, flags: players.flags })
       .from(players)
       .where(sql`${players.id} = ${who.id}`);
     // same rules as the top list, so you never get a rank the board doesn't show
@@ -35,7 +35,19 @@ export async function GET(req: Request) {
         .select({ ahead: sql<number>`count(*)::int` })
         .from(players)
         // ties go to whoever started first, matching the top list's order
-        .where(and(honest, or(gt(players.lifetimeWood, row.wood), and(eq(players.lifetimeWood, row.wood), lt(players.createdAt, row.createdAt)))));
+        // compared in SQL, since JS dates drop the microseconds Postgres keeps
+        .where(
+          and(
+            honest,
+            or(
+              gt(players.lifetimeWood, row.wood),
+              and(
+                eq(players.lifetimeWood, row.wood),
+                sql`(${players.createdAt}, ${players.id}) < (select created_at, id from players where id = ${who.id})`,
+              ),
+            ),
+          ),
+        );
       me = { rank: ahead + 1, name: row.name, wood: row.wood, level: row.level };
     }
   }

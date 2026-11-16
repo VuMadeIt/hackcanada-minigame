@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Pixelify_Sans } from "next/font/google";
 import "./globals.css";
+import "./game.css";
+
+const pixel = Pixelify_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Timber Tycoon",
@@ -15,7 +19,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={pixel.className}>{children}</body>
     </html>
   );
 }

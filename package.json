@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:push": "drizzle-kit push",
+    "sim": "tsx scripts/simulate.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",

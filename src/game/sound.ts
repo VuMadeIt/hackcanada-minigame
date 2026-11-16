@@ -1,0 +1,74 @@
+// Every sound is synthesized with ZzFX, so there are no audio files to ship or license.
+// ZzFX creates an AudioContext when imported, so it is only loaded in the browser after a click.
+
+type Params = (number | undefined)[];
+
+const SOUNDS = {
+  chop: [1.1, 0.05, 140, 0.005, 0.02, 0.09, 4, 1.4, -6, , , , , 0.7, , 0.1, , 0.55, 0.02],
+  chopAuto: [0.35, 0.05, 180, 0.005, 0.01, 0.06, 4, 1.4, -6, , , , , 0.6, , 0.1, , 0.5, 0.02],
+  crit: [1.4, 0.05, 520, 0.005, 0.04, 0.18, 1, 1.8, , , 380, 0.04, , , , , , 0.75, 0.04],
+  mega: [1.8, 0, 260, 0.01, 0.2, 0.5, 1, 1.5, , , 520, 0.05, 0.08, , , , 0.05, 0.8, 0.1],
+  fell: [2, 0.05, 70, 0.02, 0.25, 0.6, 4, 2.4, -1.2, , , , , 1, , 0.3, 0.12, 0.45, 0.2],
+  sell: [1, 0.02, 1500, , 0.05, 0.2, 1, 1.8, , , 760, 0.05],
+  coin: [0.5, 0.05, 1900, , 0.02, 0.08, 1, 1.8, , , 600, 0.03],
+  buy: [1, 0.02, 520, , 0.06, 0.16, , 1.4, , , 260, 0.06],
+  deny: [0.9, 0.02, 140, , 0.04, 0.12, 2, 0.6, , , , , , , , , , 0.5],
+  click: [0.6, 0.02, 820, , 0.01, 0.03, , 2.2],
+  golden: [1.3, 0.02, 880, 0.02, 0.15, 0.35, , 1.9, , , 660, 0.07, 0.07, , , , , 0.7, 0.05],
+  squeak: [1, 0.1, 1100, 0.01, 0.03, 0.08, , 2.5, 20, , , , , , , , , 0.6],
+  reel: [0.45, 0.02, 380, , 0.01, 0.02, 3, 2.5, , , , , , 0.3],
+  reelStop: [0.9, 0.02, 220, , 0.02, 0.08, 4, 1.5, , , , , , 0.5],
+  win: [1.2, 0.02, 660, 0.02, 0.2, 0.3, , 1.7, , , 330, 0.08, 0.06],
+  lose: [0.8, 0.02, 300, 0.02, 0.1, 0.3, 1, 1.2, -2, , , , 0.1],
+  whoosh: [0.5, 0.05, 300, 0.05, 0.05, 0.15, 4, 0, 5, , , , , 2],
+} satisfies Record<string, Params>;
+
+export type SoundName = keyof typeof SOUNDS;
+
+type Zzfx = typeof import("zzfx");
+let lib: Zzfx | null = null;
+let loading: Promise<void> | null = null;
+let muted = false;
+const lastPlayed: Partial<Record<SoundName, number>> = {};
+
+export function unlockAudio() {
+  if (lib || loading || typeof window === "undefined") return;
+  loading = import("zzfx").then((m) => {
+    lib = m;
+    lib.ZZFX.volume = 0.25;
+    if (lib.ZZFX.audioContext.state === "suspended") void lib.ZZFX.audioContext.resume();
+  });
+}
+
+export function setMuted(m: boolean) {
+  muted = m;
+}
+
+export function isMuted() {
+  return muted;
+}
+
+/** pitch: 1 is normal. minGapMs stops 20 chops a second turning into mush. */
+export function play(name: SoundName, pitch = 1, minGapMs = 18) {
+  if (muted || !lib) return;
+  const now = performance.now();
+  if (now - (lastPlayed[name] ?? 0) < minGapMs) return;
+  lastPlayed[name] = now;
+  const p = [...SOUNDS[name]] as number[];
+  p[2] = (p[2] ?? 220) * pitch;
+  try {
+    lib.zzfx(...p);
+  } catch {
+    // audio can fail if the tab loses its audio device; the game shouldn't care
+  }
+}
+
+/** a quick rising arpeggio, for level ups and big wins */
+export function fanfare(notes = [523, 659, 784, 1047], gap = 70) {
+  notes.forEach((f, i) =>
+    setTimeout(() => {
+      if (muted || !lib) return;
+      lib.zzfx(...[1, 0.02, f, 0.01, 0.08, 0.2, 0, 1.6, , , , , , , , , , 0.7, 0.04]);
+    }, i * gap),
+  );
+}

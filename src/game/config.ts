@@ -120,6 +120,9 @@ export const CHOP = {
   stumpMs: 450,
 };
 
+/** wood/s bonus per Bone Meal level, on everything you own */
+export const BONE_MEAL_PER_LEVEL = 0.15;
+
 export const LEVELS = {
   firstLevelXp: 400,
   growth: 2,

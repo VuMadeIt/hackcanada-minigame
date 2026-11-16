@@ -117,7 +117,7 @@ export const CHOP = {
   wateringHpCut: 0.05,
   fellBonusChops: 10,
   splitterBonus: 0.25,
-  stumpMs: 450,
+  stumpMs: 800,
 };
 
 /** wood/s bonus per Bone Meal level, on everything you own */

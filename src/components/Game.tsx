@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { BUILDINGS, CASINO_UNLOCK_LEVEL, CHOP, GOLDEN, OFFLINE, TOOLS, UPGRADES, ZONES, type BuildingId, type UpgradeId, type ZoneId } from "@/game/config";
 import * as E from "@/game/engine";
 import { fmt, fmtTime } from "@/game/format";
-import { fanfare, play, setMuted, unlockAudio } from "@/game/sound";
+import { fanfare, isMuted, play, setMuted, unlockAudio } from "@/game/sound";
 import { newGame, normalize, type GameState } from "@/game/state";
 import { Fx } from "./fx";
 import * as Net from "./net";
@@ -19,6 +19,17 @@ const SAVE_KEY = "timber-tycoon-save";
 const OWNER_KEY = "timber-tycoon-save-owner";
 const MUTE_KEY = "timber-tycoon-muted";
 const TAB_KEY = "timber-tycoon-tab";
+
+// Where the axe bites into each tree, as a fraction of the sprite (x from the left, y from the top).
+// The stump fills the trunk below that line and the falling half is everything above it.
+const NOTCH: Record<string, [number, number]> = { oak: [0.69, 0.47], birch: [0.64, 0.63], maple: [0.73, 0.6], ancient: [0.69, 0.56] };
+const HEARTWOOD: Record<string, string> = { oak: "#e9c27d", birch: "#f3e6c4", maple: "#eab27a", ancient: "#c9a0e8" };
+// the cutting edge of each paw sprite, same units
+const BLADE: Record<string, [number, number]> = { chainsaw: [0.02, 0.08] };
+const STRIKE_DEG = -28;
+const SWING_MS = 200;
+const SWING_HIT_MS = 110;
+const FALL_LAND_MS = 620;
 
 // localStorage throws outright when the browser blocks storage (some iframes, strict privacy modes)
 const store = {
@@ -113,6 +124,11 @@ export default function Game() {
   const stageRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<HTMLDivElement>(null);
   const pawRef = useRef<HTMLImageElement>(null);
+  const trunkRef = useRef<HTMLDivElement>(null);
+  const [fall, setFall] = useState<{ key: number; species: string } | null>(null);
+  const lastFelled = useRef("oak");
+  const fellRef = useRef<(species: string) => void>(() => {});
+  const helloRef = useRef<(hello: Net.Connected) => Promise<void>>(async () => {});
   const armRef = useRef<HTMLImageElement>(null);
   const woodRef = useRef<HTMLDivElement>(null);
   const coinRef = useRef<HTMLDivElement>(null);
@@ -188,8 +204,7 @@ export default function Game() {
       refresh();
     };
     adoptRef.current = adopt;
-    void Net.connect().then(async (hello) => {
-      if (!alive || !hello) return;
+    const onHello = async (hello: Net.Connected) => {
       setPlayer(hello.player);
       setFreeSpins(hello.freeSpins);
       const local = sRef.current!;
@@ -207,6 +222,10 @@ export default function Game() {
       } else {
         adopt(hello.state, true);
       }
+    };
+    helloRef.current = onHello;
+    void Net.connect().then((hello) => {
+      if (alive && hello) void onHello(hello);
     });
 
     let last = Date.now();
@@ -239,7 +258,10 @@ export default function Game() {
           const y = rect.top + rect.height * (0.55 + Math.random() * 0.25);
           fx.text(x, y, `+${fmt(c.amount + c.bonus)}`, { size: 14, color: c.crit !== "none" ? "#ffd23f" : "#d8f0ff", life: 0.7 });
           fx.chips(x, y, 3, CHIPS[st.tree.species] ?? CHIPS.oak, 0.6);
-          if (c.felled) fx.text(rect.left + rect.width / 2, rect.top + rect.height * 0.3, `TIMBER! +${fmt(c.bonus)}`, { size: 26, color: "#9cff6a", life: 1.2 });
+          if (c.felled) {
+            fx.text(rect.left + rect.width / 2, rect.top + rect.height * 0.3, `TIMBER! +${fmt(c.bonus)}`, { size: 26, color: "#9cff6a", life: 1.2 });
+            fellRef.current(c.species);
+          }
         }
         play("chopAuto", 1, 60);
         armRef.current?.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(-22deg)" }, { transform: "rotate(0deg)" }], { duration: 220 });
@@ -330,6 +352,69 @@ export default function Game() {
   }, [tabId, refresh]);
 
   // ---------- chopping ----------
+  /** Swings the paw so the blade lands in the notch. Returns where it lands, in page coordinates. */
+  const swingPaw = useCallback((species: string, standing: boolean) => {
+    const paw = pawRef.current;
+    const stage = stageRef.current;
+    const trunk = trunkRef.current;
+    if (!paw || !stage) return null;
+    let dx = 0;
+    let dy = 0;
+    let hit: { x: number; y: number } | null = null;
+    if (trunk && standing) {
+      const sr = stage.getBoundingClientRect();
+      const tr = trunk.getBoundingClientRect();
+      const [nx, ny] = NOTCH[species] ?? NOTCH.oak;
+      const tx = tr.left - sr.left + tr.width * nx;
+      const ty = tr.top - sr.top + tr.height * ny;
+      // offsetLeft/Top ignore any swing already playing, so overlapping swings still aim right
+      const w = paw.offsetWidth;
+      const h = paw.offsetHeight;
+      const ox = paw.offsetLeft + w * 0.85;
+      const oy = paw.offsetTop + h * 0.95;
+      const [bx, by] = BLADE[paw.dataset.tool ?? ""] ?? [0.02, 0.2];
+      const vx = w * (bx - 0.85);
+      const vy = h * (by - 0.95);
+      const a = (STRIKE_DEG * Math.PI) / 180;
+      dx = tx - (ox + vx * Math.cos(a) - vy * Math.sin(a));
+      dy = ty - (oy + vx * Math.sin(a) + vy * Math.cos(a));
+      hit = { x: sr.left + tx, y: sr.top + ty };
+    }
+    const at = (x: number, y: number, deg: number) => ({ transform: `translate(${x}px, ${y}px) rotate(${deg}deg)` });
+    paw.animate(
+      [
+        at(0, 0, 0),
+        { ...at(dx * 0.15 + 10, dy * 0.15 - 14, 18), offset: 0.3 },
+        { ...at(dx, dy, STRIKE_DEG), offset: 0.55 },
+        { ...at(dx + 3, dy + 2, STRIKE_DEG + 3), offset: 0.7 },
+        at(0, 0, 0),
+      ],
+      { duration: SWING_MS, easing: "ease-out" },
+    );
+    return hit;
+  }, []);
+
+  const fellTree = useCallback(
+    (species: string) => {
+      lastFelled.current = species;
+      setFall({ key: Date.now(), species });
+      play("creak");
+      setTimeout(() => {
+        const tr = treeRef.current?.getBoundingClientRect();
+        const st = sRef.current;
+        play("fell");
+        stageRef.current?.animate([{ transform: "translateY(0)" }, { transform: "translateY(8px)" }, { transform: "translateY(-3px)" }, { transform: "translateY(0)" }], { duration: 320 });
+        if (tr && st) {
+          // the crown lands to the left of the stump
+          fx.leaves(tr.left - tr.width * 0.7, tr.left + tr.width * 0.2, tr.bottom - tr.height * 0.25, 26, LEAVES[st.zone]);
+          fx.chips(tr.left - tr.width * 0.2, tr.bottom - tr.height * 0.08, 24, CHIPS[species] ?? CHIPS.oak, 1.2);
+        }
+      }, FALL_LAND_MS);
+    },
+    [fx],
+  );
+  fellRef.current = fellTree;
+
   const doChop = useCallback(
     (x: number, y: number) => {
       const s = sRef.current;
@@ -339,11 +424,9 @@ export default function Game() {
       lastClick.current = now;
       unlockAudio();
 
-      pawRef.current?.animate(
-        [{ transform: "rotate(0deg)" }, { transform: "rotate(-42deg)", offset: 0.3 }, { transform: "rotate(6deg)", offset: 0.7 }, { transform: "rotate(0deg)" }],
-        { duration: 170, easing: "ease-out" },
-      );
       const species = s.tree.species;
+      const standing = now >= s.tree.regrowAt;
+      const hit = swingPaw(species, standing);
       const res = E.chop(s, now, Math.random);
       if (!res) return;
 
@@ -363,10 +446,14 @@ export default function Game() {
         stageRef.current?.animate([{ transform: "translate(0,0)" }, { transform: "translate(-4px,3px)" }, { transform: "translate(3px,-2px)" }, { transform: "translate(0,0)" }], { duration: 160 });
       } else {
         fx.text(x, y - 20, `+${fmt(res.amount)}`, { size: 18 + comboSize, color: "#fff7e0" });
-        fx.chips(x, y, 7, chips);
       }
       play("chop", 1 + Math.min(res.combo, CHOP.comboMax) * 0.007);
-      treeRef.current?.animate([{ transform: "translateX(0)" }, { transform: "translateX(-5px) rotate(-0.6deg)" }, { transform: "translateX(3px)" }, { transform: "translateX(0)" }], { duration: 130 });
+      // chips fly out of the notch when the blade actually lands, not when you click
+      setTimeout(() => {
+        const at = hit ?? { x, y };
+        fx.chips(at.x, at.y, res.crit === "mega" ? 18 : res.crit === "crit" ? 12 : 7, chips, res.crit === "none" ? 1 : 1.4);
+        treeRef.current?.animate([{ transform: "translateX(0)" }, { transform: "translateX(-5px) rotate(-0.6deg)" }, { transform: "translateX(3px)" }, { transform: "translateX(0)" }], { duration: 130 });
+      }, SWING_HIT_MS);
 
       if (res.combo > 0 && res.combo % 25 === 0) {
         fx.text(x, y - 70, `${res.combo} COMBO!`, { size: 22, color: "#ff6a3d", life: 1.1 });
@@ -379,15 +466,13 @@ export default function Game() {
       if (res.felled && tr) {
         const cx = tr.left + tr.width / 2;
         fx.text(cx, tr.top + tr.height * 0.35, `TIMBER! +${fmt(res.bonus)}`, { size: 36, color: "#9cff6a", life: 1.5, rise: 60 });
-        fx.chips(cx, tr.bottom - tr.height * 0.25, 40, chips, 1.6);
-        fx.leaves(tr.left, tr.right, tr.top + tr.height * 0.15, 24, LEAVES[s.zone]);
-        play("fell");
-        stageRef.current?.animate([{ transform: "translateY(0)" }, { transform: "translateY(7px)" }, { transform: "translateY(-3px)" }, { transform: "translateY(0)" }], { duration: 300 });
+        fx.chips(hit?.x ?? cx, hit?.y ?? tr.bottom - tr.height * 0.4, 30, chips, 1.6);
+        fellRef.current(species);
       }
       if (res.levelUp) celebrateLevel(res.levelUp);
       refresh();
     },
-    [fx, refresh, celebrateLevel],
+    [fx, refresh, celebrateLevel, swingPaw],
   );
 
   useEffect(() => {
@@ -479,8 +564,8 @@ export default function Game() {
     [fx, refresh, showBanner],
   );
 
-  const toggleMute = () => {
-    const m = !muted;
+  const toggleMute = useCallback(() => {
+    const m = !isMuted();
     setMuted(m);
     setMutedUi(m);
     store.set(MUTE_KEY, m ? "1" : "0");
@@ -488,7 +573,46 @@ export default function Game() {
       unlockAudio();
       setTimeout(() => play("click"), 50);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== "KeyM" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.target as HTMLElement)?.closest("input, textarea")) return;
+      toggleMute();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleMute]);
+
+  const pickName = useCallback(
+    async (name: string) => {
+      const hello = await Net.connect(name);
+      if (!hello) return false;
+      await helloRef.current(hello);
+      refresh();
+      return true;
+    },
+    [refresh],
+  );
+
+  const boost = useCallback(
+    async (what: Net.BoostKind) => {
+      if (spinning.current) return;
+      spinning.current = true;
+      const r = await Net.boost(what);
+      spinning.current = false;
+      if (!r) {
+        play("deny");
+        return;
+      }
+      adoptRef.current(r.state, false);
+      setFreeSpins(r.freeSpins);
+      if (what === "casino") fanfare();
+      else play("coin");
+    },
+    [],
+  );
 
   // ---------- render ----------
   const s = sRef.current;
@@ -509,6 +633,17 @@ export default function Game() {
           <Hud s={s} d={d} now={now} woodRef={woodRef} coinRef={coinRef} />
 
           <main ref={stageRef} className="stage" style={{ backgroundImage: `url(${spriteUrl(BG[s.zone])})` }}>
+            <button
+              className={`sound-toggle ${muted ? "off" : ""}`}
+              onClick={toggleMute}
+              aria-label={muted ? "Turn sound on" : "Turn sound off"}
+              aria-pressed={!muted}
+              title={muted ? "Sound off (M)" : "Sound on (M)"}
+              data-testid="sound"
+            >
+              <SpeakerIcon off={muted} />
+              <span>{muted ? "Sound off" : "Sound on"}</span>
+            </button>
             <div className="tree-label">
               <span>{s.tree.species === "ancient" ? "Ancient tree" : `${s.tree.species[0].toUpperCase()}${s.tree.species.slice(1)} tree`}</span>
               <div className="bar hp">
@@ -528,10 +663,46 @@ export default function Game() {
             >
               {stump ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img className="tree-img stump" src={spriteUrl("tree/stump")} alt="stump" draggable={false} />
+                <img
+                  className="tree-img stump"
+                  src={spriteUrl(`tree/stump_${lastFelled.current}`)}
+                  style={{ height: `${(1 - (NOTCH[lastFelled.current] ?? NOTCH.oak)[1]) * 100}%` }}
+                  alt={`${lastFelled.current} stump`}
+                  draggable={false}
+                />
               ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={s.stats.treesFelled} className="tree-img grow" src={spriteUrl(`tree/${s.tree.species}`)} alt={`${s.tree.species} tree`} draggable={false} />
+                <div ref={trunkRef} key={s.stats.treesFelled} className="trunk grow">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="tree-img" src={spriteUrl(`tree/${s.tree.species}`)} alt={`${s.tree.species} tree`} draggable={false} />
+                  <span
+                    className="cut"
+                    style={
+                      {
+                        left: `${(NOTCH[s.tree.species] ?? NOTCH.oak)[0] * 100}%`,
+                        top: `${(NOTCH[s.tree.species] ?? NOTCH.oak)[1] * 100}%`,
+                        "--cut": Math.min(1, Math.max(0, 1 - s.tree.hp / s.tree.maxHp)),
+                        "--heart": HEARTWOOD[s.tree.species] ?? HEARTWOOD.oak,
+                      } as CSSProperties
+                    }
+                  />
+                </div>
+              )}
+              {fall && (
+                <div
+                  key={fall.key}
+                  className="trunk falling"
+                  style={
+                    {
+                      "--nx": 1 - (NOTCH[fall.species] ?? NOTCH.oak)[0],
+                      "--ny": (NOTCH[fall.species] ?? NOTCH.oak)[1],
+                    } as CSSProperties
+                  }
+                  onAnimationEnd={() => setFall((f) => (f?.key === fall.key ? null : f))}
+                  aria-hidden
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="tree-img" src={spriteUrl(`tree/${fall.species}`)} alt="" draggable={false} />
+                </div>
               )}
               {(s.upgrades.robo_arm ?? 0) > 0 && (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -540,7 +711,7 @@ export default function Game() {
             </div>
 
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img ref={pawRef} className={`paw ${tool.id}`} src={spriteUrl(`paw/${tool.id}`)} alt="your beaver paw" draggable={false} />
+            <img ref={pawRef} data-tool={tool.id} className={`paw ${tool.id}`} src={spriteUrl(`paw/${tool.id}`)} alt="your beaver paw" draggable={false} />
 
             <div className="camp" aria-label="Your crew">
               {BUILDINGS.filter((b) => (s.buildings[b.id] ?? 0) > 0).map((b) => (
@@ -629,10 +800,6 @@ export default function Game() {
               <Icon name="shop/trophy" size={22} />
               <span>RANKS</span>
             </PxButton>
-            <div className="rail-spacer" />
-            <button className="mute" onClick={toggleMute} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
-              {muted ? "SFX off" : "SFX on"}
-            </button>
           </nav>
 
           {panel === "board" && <LeaderboardPanel myWood={s.lifetimeWood} onClose={() => setPanel(null)} />}
@@ -647,6 +814,9 @@ export default function Game() {
                 if (!free && sRef.current) sRef.current.coins = Math.max(0, sRef.current.coins - bet);
                 refresh();
               }}
+              onPickName={Net.canPickName() ? pickName : undefined}
+              testTools={Net.hasTestTools()}
+              onBoost={boost}
               onStart={() => (spinning.current = true)}
               onSettled={(r) => {
                 spinning.current = false;
@@ -706,5 +876,18 @@ export default function Game() {
         </>
       )}
     </div>
+  );
+}
+
+function SpeakerIcon({ off }: { off: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" shapeRendering="crispEdges" aria-hidden>
+      <path d="M1 6h3v4H1zM4 5h2v6H4zM6 3h2v10H6z" fill="currentColor" />
+      {off ? (
+        <path d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v1h-1zM13 8h1v1h-1zM14 9h1v1h-1zM14 5h1v1h-1zM13 6h1v1h-1zM11 8h1v1h-1zM10 9h1v1h-1z" fill="currentColor" />
+      ) : (
+        <path d="M10 6h1v4h-1zM12 4h1v1h-1zM13 5h1v6h-1zM12 11h1v1h-1z" fill="currentColor" />
+      )}
+    </svg>
   );
 }

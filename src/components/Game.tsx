@@ -826,7 +826,11 @@ export default function Game() {
               onPickName={Net.canPickName() ? pickName : undefined}
               testTools={Net.hasTestTools()}
               onBoost={boost}
-              onStart={() => (spinning.current = true)}
+              pending={spinning.current}
+              onStart={() => {
+                spinning.current = true;
+                refresh();
+              }}
               onSettled={(r) => {
                 spinning.current = false;
                 const cur = sRef.current;

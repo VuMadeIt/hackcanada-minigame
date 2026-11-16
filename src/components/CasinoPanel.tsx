@@ -38,6 +38,7 @@ export function CasinoPanel({
   now,
   freeSpins,
   onClose,
+  pending,
   onStart,
   onSpent,
   onSettled,
@@ -49,6 +50,8 @@ export function CasinoPanel({
   now: number;
   freeSpins: number;
   onClose: () => void;
+  /** a spin or boost is still waiting on the server, maybe from before the panel was reopened */
+  pending: boolean;
   onStart: () => void;
   onSpent: (bet: number, free: boolean) => void;
   onSettled: (r: Net.SpinReply & { newState?: GameState }) => void;
@@ -58,7 +61,8 @@ export function CasinoPanel({
 }) {
   const [reels, setReels] = useState<Reels>(["seven", "coin", "log"]);
   const [stopped, setStopped] = useState<[boolean, boolean, boolean]>([true, true, true]);
-  const [busy, setBusy] = useState(false);
+  const [spinningHere, setBusy] = useState(false);
+  const busy = spinningHere || pending;
   const [line, setLine] = useState<{ text: string; tone: "win" | "lose" | "big" | "err" } | null>(null);
   const [won, setWon] = useState<{ name: string; code: string; redeemed: boolean }[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);

@@ -182,9 +182,13 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
         snap();
       }
     } else {
-      now = back;
-      E.applyOffline(s, now);
-      snap();
+      // settle in pieces so a checkpoint inside the break only sees what was earned by then
+      while (now < back) {
+        const mark = checkpoints.length ? checkpoints[0] * 3600_000 : Infinity;
+        now = Math.min(back, mark);
+        if (now - s.savedAt >= 60_000) E.applyOffline(s, now);
+        snap();
+      }
     }
     if (s.nextGoldenAt < now) E.scheduleGolden(s, now, rng);
     shop(s, now, p, log);

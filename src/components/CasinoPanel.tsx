@@ -38,21 +38,31 @@ export function CasinoPanel({
   now,
   freeSpins,
   onClose,
+  pending,
   onStart,
   onSpent,
   onSettled,
+  onPickName,
+  testTools,
+  onBoost,
 }: {
   s: GameState;
   now: number;
   freeSpins: number;
   onClose: () => void;
+  /** a spin or boost is still waiting on the server, maybe from before the panel was reopened */
+  pending: boolean;
   onStart: () => void;
   onSpent: (bet: number, free: boolean) => void;
   onSettled: (r: Net.SpinReply & { newState?: GameState }) => void;
+  onPickName?: (name: string) => Promise<boolean>;
+  testTools: boolean;
+  onBoost: (what: Net.BoostKind) => Promise<void>;
 }) {
   const [reels, setReels] = useState<Reels>(["seven", "coin", "log"]);
   const [stopped, setStopped] = useState<[boolean, boolean, boolean]>([true, true, true]);
-  const [busy, setBusy] = useState(false);
+  const [spinningHere, setBusy] = useState(false);
+  const busy = spinningHere || pending;
   const [line, setLine] = useState<{ text: string; tone: "win" | "lose" | "big" | "err" } | null>(null);
   const [won, setWon] = useState<{ name: string; code: string; redeemed: boolean }[]>([]);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -68,7 +78,10 @@ export function CasinoPanel({
   const canPay = freeSpins > 0 || s.coins >= cost;
 
   useEffect(() => {
-    void Net.casinoInfo().then((i) => i && setWon(i.prizes));
+    if (signedIn) void Net.casinoInfo().then((i) => i && setWon(i.prizes));
+  }, [signedIn]);
+
+  useEffect(() => {
     const t = timers.current;
     mounted.current = true;
     return () => {
@@ -147,6 +160,8 @@ export function CasinoPanel({
   }
 
   const lvl = levelFor(s.lifetimeWood);
+  const signInBox = !signedIn && onPickName ? <PickName onPick={onPickName} /> : null;
+  const tools = signedIn && testTools ? <TestTools busy={busy} open={open} onBoost={onBoost} /> : null;
 
   return (
     <Panel title="Casino" onClose={onClose} className="casino">
@@ -156,6 +171,8 @@ export function CasinoPanel({
           <p>
             The slot machine opens at <b>level {CASINO_UNLOCK_LEVEL}</b>. You&apos;re level {lvl}. Keep chopping.
           </p>
+          {signInBox}
+          {tools}
         </div>
       ) : (
         <>
@@ -180,7 +197,7 @@ export function CasinoPanel({
               </>
             )}
           </PxButton>
-          {!signedIn && <p className="casino-note">{ERRORS.offline}</p>}
+          {!signedIn && (signInBox ?? <p className="casino-note">{ERRORS.offline}</p>)}
           <table className="paytable">
             <tbody>
               {ODDS.map((o) => (
@@ -201,6 +218,7 @@ export function CasinoPanel({
               </tr>
             </tbody>
           </table>
+          {tools}
           {won.length > 0 && (
             <div className="won">
               <b>Your prizes</b>
@@ -227,3 +245,61 @@ const PAYS: Record<string, string> = {
   coins: `${PAYOUT.coins}x coins`,
   wood: `${PAYOUT.wood}x as wood`,
 };
+
+function PickName({ onPick }: { onPick: (name: string) => Promise<boolean> }) {
+  const [name, setName] = useState("");
+  const [state, setState] = useState<"idle" | "busy" | "failed">("idle");
+  return (
+    <form
+      className="pick-name"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (!name.trim() || state === "busy") return;
+        setState("busy");
+        setState((await onPick(name.trim())) ? "idle" : "failed");
+      }}
+    >
+      <label htmlFor="pick-name">The casino needs a name for the leaderboard and prizes.</label>
+      <div>
+        <input id="pick-name" value={name} maxLength={24} placeholder="Your name" onChange={(e) => setName(e.target.value)} data-testid="pick-name" />
+        <PxButton tone="green" type="submit" disabled={!name.trim() || state === "busy"}>
+          {state === "busy" ? "..." : "Play"}
+        </PxButton>
+      </div>
+      {state === "failed" && <small>Couldn&apos;t sign in. Is the game server running?</small>}
+    </form>
+  );
+}
+
+function TestTools({ busy, open, onBoost }: { busy: boolean; open: boolean; onBoost: (what: Net.BoostKind) => Promise<void> }) {
+  const [working, setWorking] = useState(false);
+  const run = async (what: Net.BoostKind) => {
+    setWorking(true);
+    await onBoost(what);
+    setWorking(false);
+  };
+  const off = busy || working;
+  return (
+    <div className="test-tools" data-testid="test-tools">
+      <b>Test mode</b>
+      <small>Only on test servers. These buttons are gone in the real launch.</small>
+      <div>
+        {!open && (
+          <PxButton tone="blue" onClick={() => run("casino")} disabled={off} data-testid="boost-casino">
+            Skip to level {CASINO_UNLOCK_LEVEL}
+          </PxButton>
+        )}
+        {open && (
+          <>
+            <PxButton tone="blue" onClick={() => run("coins")} disabled={off} data-testid="boost-coins">
+              +20 spins of coins
+            </PxButton>
+            <PxButton tone="blue" onClick={() => run("spins")} disabled={off} data-testid="boost-spins">
+              +10 free spins
+            </PxButton>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

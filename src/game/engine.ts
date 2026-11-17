@@ -124,6 +124,8 @@ export type CritKind = "none" | "crit" | "mega";
 export interface ChopResult {
   amount: number;
   crit: CritKind;
+  /** the tree this chop hit, which is no longer s.tree if it fell */
+  species: TreeState["species"];
   felled: boolean;
   bonus: number;
   combo: number;
@@ -165,6 +167,7 @@ export function chop(s: GameState, now: number, rng: Rng, auto = false): ChopRes
 
   let felled = false;
   let bonus = 0;
+  const species = s.tree.species;
   if (s.tree.hp <= 0) {
     felled = true;
     bonus = d.fellBonus * d.frenzy;
@@ -174,7 +177,7 @@ export function chop(s: GameState, now: number, rng: Rng, auto = false): ChopRes
   }
 
   const after = levelFor(s.lifetimeWood);
-  return { amount, crit, felled, bonus, combo: auto ? 0 : s.combo, levelUp: after > before ? after : null };
+  return { amount, crit, species, felled, bonus, combo: auto ? 0 : s.combo, levelUp: after > before ? after : null };
 }
 
 export interface TickResult {

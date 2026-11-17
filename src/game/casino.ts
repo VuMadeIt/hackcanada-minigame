@@ -9,7 +9,7 @@ export type Outcome = "jackpot" | "coins" | "wood" | "leaves" | "spins" | "upgra
 
 // chance per spin; whatever's left over is a miss
 export const ODDS: { outcome: Exclude<Outcome, "pair" | "miss">; sym: Sym; p: number }[] = [
-  { outcome: "jackpot", sym: "seven", p: 0.02 },
+  { outcome: "jackpot", sym: "seven", p: 0.05 },
   { outcome: "upgrade", sym: "gem", p: 0.03 },
   { outcome: "spins", sym: "beaver", p: 0.04 },
   { outcome: "leaves", sym: "leaf", p: 0.05 },
@@ -25,7 +25,7 @@ export const PAYOUT = {
   wood: 3, // x bet, paid as wood at the base price
   freeSpins: 2,
   upgradeCap: 4, // the free upgrade is never worth more than this many bets
-  jackpotFallback: 50, // x bet, when the prize shelf is empty
+  jackpotFallback: 10, // x bet, when the prize shelf is empty
 };
 
 export const casinoOpen = (s: GameState) => levelFor(s.lifetimeWood) >= CASINO_UNLOCK_LEVEL;

@@ -1,5 +1,5 @@
 import { CASINO_UNLOCK_LEVEL, UPGRADES, type UpgradeId } from "./config";
-import { derive, levelFor, pileSize, upgradeCost, type Rng } from "./engine";
+import { derive, levelFor, upgradeCost, type Rng } from "./engine";
 import type { GameState } from "./state";
 
 export type Sym = "seven" | "coin" | "log" | "leaf" | "beaver" | "gem";
@@ -19,11 +19,12 @@ export const ODDS: { outcome: Exclude<Outcome, "pair" | "miss">; sym: Sym; p: nu
 export const PAIR_ODDS = 0.2;
 
 export const PAYOUT = {
-  coins: 8, // x bet
-  leaves: 3, // x bet
+  coins: 5, // x bet
+  leaves: 2, // x bet
   pair: 1, // money back
-  wood: 4, // x a golden beaver log pile
+  wood: 3, // x bet, paid as wood at the base price
   freeSpins: 2,
+  upgradeCap: 4, // the free upgrade is never worth more than this many bets
   jackpotFallback: 50, // x bet, when the prize shelf is empty
 };
 
@@ -77,11 +78,13 @@ export function applyOutcome(s: GameState, outcome: Outcome, bet: number, now: n
   if (outcome === "coins") r.coins = bet * PAYOUT.coins;
   else if (outcome === "leaves") r.coins = bet * PAYOUT.leaves;
   else if (outcome === "pair") r.coins = bet * PAYOUT.pair;
-  else if (outcome === "wood") r.wood = pileSize(s, now) * PAYOUT.wood;
+  else if (outcome === "wood") r.wood = (bet * PAYOUT.wood) / derive(s, now).priceBase;
   else if (outcome === "spins") r.freeSpins = PAYOUT.freeSpins;
   else if (outcome === "upgrade") {
     const lvl = levelFor(s.lifetimeWood);
-    const open = UPGRADES.filter((u) => u.unlockLevel <= lvl && (s.upgrades[u.id] ?? 0) < u.max);
+    const open = UPGRADES.filter(
+      (u) => u.unlockLevel <= lvl && (s.upgrades[u.id] ?? 0) < u.max && upgradeCost(u.id, s.upgrades[u.id] ?? 0) <= bet * PAYOUT.upgradeCap,
+    );
     if (open.length) {
       const u = open[Math.floor(rng() * open.length)];
       const have = s.upgrades[u.id] ?? 0;

@@ -225,5 +225,5 @@ const PAYS: Record<string, string> = {
   spins: `${PAYOUT.freeSpins} free spins`,
   leaves: `${PAYOUT.leaves}x coins`,
   coins: `${PAYOUT.coins}x coins`,
-  wood: "big log pile",
+  wood: `${PAYOUT.wood}x as wood`,
 };

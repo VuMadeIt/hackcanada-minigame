@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BUILDINGS, TOOLS, UPGRADES, ZONES, type BuildingId, type UpgradeId, type ZoneId } from "@/game/config";
+import { BONE_MEAL_PER_LEVEL, BUILDINGS, TOOLS, UPGRADES, ZONES, type BuildingId, type UpgradeId, type ZoneId } from "@/game/config";
 import { buildingCost, canBuyUpgrade, derive, levelFor, maxAffordable, upgradeCost } from "@/game/engine";
 import { fmt } from "@/game/format";
 import type { GameState } from "@/game/state";
@@ -96,7 +96,7 @@ export function ShopPanel({ s, now, onClose, act }: { s: GameState; now: number;
                     </div>
                   </li>
                 );
-              const each = b.rate * d.levelMult * d.zoneMult * (1 + 0.25 * (s.upgrades.bone_meal ?? 0));
+              const each = b.rate * d.levelMult * d.zoneMult * (1 + BONE_MEAL_PER_LEVEL * (s.upgrades.bone_meal ?? 0));
               return (
                 <li key={b.id} className={`row ${ok ? "ready" : ""}`}>
                   <Icon name={b.icon} size={40} />

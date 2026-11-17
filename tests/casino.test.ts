@@ -63,7 +63,7 @@ describe("slot machine", () => {
     expect(applyOutcome(s, "spins", 100, 0, rng).freeSpins).toBe(PAYOUT.freeSpins);
     const before = s.lifetimeWood;
     const w = applyOutcome(s, "wood", 100, 0, rng).wood;
-    expect(w).toBeGreaterThan(0);
+    expect(w).toBeCloseTo(100 * PAYOUT.wood);
     expect(s.lifetimeWood).toBe(before + w);
     expect(applyOutcome(s, "miss", 100, 0, rng)).toEqual({ coins: 0, wood: 0, freeSpins: 0, upgrade: null });
   });
@@ -81,6 +81,16 @@ describe("slot machine", () => {
     const r2 = applyOutcome(maxed, "upgrade", 100, 0, seeded(5));
     expect(r2.upgrade).toBeNull();
     expect(r2.coins).toBe(100 * PAYOUT.coins);
+  });
+
+  it("never hands out an upgrade worth more than a few bets", () => {
+    for (let i = 0; i < 50; i++) {
+      const s = newGame(0);
+      s.lifetimeWood = 5e7;
+      const r = applyOutcome(s, "upgrade", 10, 0, seeded(i));
+      if (r.upgrade) expect(r.upgrade.value).toBeLessThanOrEqual(10 * PAYOUT.upgradeCap);
+      else expect(r.coins).toBe(10 * PAYOUT.coins);
+    }
   });
 
   it("makes spins cost more as your income grows", () => {

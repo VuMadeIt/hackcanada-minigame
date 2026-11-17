@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BUILDINGS, CASINO_UNLOCK_LEVEL, CHOP, GOLDEN, OFFLINE, TOOLS, UPGRADES, ZONES, type BuildingId, type UpgradeId, type ZoneId } from "@/game/config";
 import * as E from "@/game/engine";
 import { fmt, fmtTime } from "@/game/format";
-import { fanfare, isMuted, play, setMuted, unlockAudio } from "@/game/sound";
+import { fanfare, isMuted, loadVolumes, play, setMuted, unlockAudio } from "@/game/sound";
+import { SoundMenu } from "./SoundMenu";
 import { newGame, normalize, type GameState } from "@/game/state";
 import { Fx } from "./fx";
 import * as Net from "./net";
@@ -179,6 +180,7 @@ export default function Game() {
     const m = store.get(MUTE_KEY) === "1";
     setMuted(m);
     setMutedUi(m);
+    loadVolumes();
     for (const k of ["coin", "log"] as const) {
       const img = new Image();
       img.src = spriteUrl(k === "coin" ? "currency/coin" : "currency/log");
@@ -545,7 +547,7 @@ export default function Game() {
       setGolden(null);
       fx.sparkle(e.clientX, e.clientY, 50);
       play("golden");
-      fanfare([784, 988, 1175, 1568], 55);
+      fanfare([784, 988, 1175, 1568], 55, "tree");
       if (r.kind === "frenzy") showBanner({ title: "FRENZY!", sub: `x${GOLDEN.frenzyMult} wood for ${GOLDEN.frenzySec} seconds. Go go go.`, tone: "gold" });
       else if (r.kind === "pile") {
         showBanner({ title: "Log pile!", sub: `The golden beaver left you ${fmt(r.amount)} wood.`, tone: "gold" });
@@ -609,7 +611,7 @@ export default function Game() {
       save();
       refresh();
       setFreeSpins(r.freeSpins);
-      if (what === "casino") fanfare();
+      if (what === "casino") fanfare(undefined, undefined, "casino");
       else play("coin");
     },
     [save, refresh],
@@ -634,17 +636,7 @@ export default function Game() {
           <Hud s={s} d={d} now={now} woodRef={woodRef} coinRef={coinRef} />
 
           <main ref={stageRef} className="stage" style={{ backgroundImage: `url(${spriteUrl(BG[s.zone])})` }}>
-            <button
-              className={`sound-toggle ${muted ? "off" : ""}`}
-              onClick={toggleMute}
-              aria-label={muted ? "Turn sound on" : "Turn sound off"}
-              aria-pressed={!muted}
-              title={muted ? "Sound off (M)" : "Sound on (M)"}
-              data-testid="sound"
-            >
-              <SpeakerIcon off={muted} />
-              <span>{muted ? "Sound off" : "Sound on"}</span>
-            </button>
+            <SoundMenu muted={muted} onToggleMute={toggleMute} />
             <div className="tree-label">
               <span>{s.tree.species === "ancient" ? "Ancient tree" : `${s.tree.species[0].toUpperCase()}${s.tree.species.slice(1)} tree`}</span>
               <div className="bar hp">
@@ -853,18 +845,5 @@ export default function Game() {
         </>
       )}
     </div>
-  );
-}
-
-function SpeakerIcon({ off }: { off: boolean }) {
-  return (
-    <svg viewBox="0 0 16 16" width="20" height="20" shapeRendering="crispEdges" aria-hidden>
-      <path d="M1 6h3v4H1zM4 5h2v6H4zM6 3h2v10H6z" fill="currentColor" />
-      {off ? (
-        <path d="M10 5h1v1h-1zM11 6h1v1h-1zM12 7h1v1h-1zM13 8h1v1h-1zM14 9h1v1h-1zM14 5h1v1h-1zM13 6h1v1h-1zM11 8h1v1h-1zM10 9h1v1h-1z" fill="currentColor" />
-      ) : (
-        <path d="M10 6h1v4h-1zM12 4h1v1h-1zM13 5h1v6h-1zM12 11h1v1h-1z" fill="currentColor" />
-      )}
-    </svg>
   );
 }

@@ -135,7 +135,7 @@ export function CasinoPanel({
             for (let k = 0; k <= i; k++) n[k] = final[k];
             return n;
           });
-          play("click", 0.8 + i * 0.15);
+          play("reelStop", 0.8 + i * 0.15);
           if (i === 2) {
             if (spinTick.current) clearInterval(spinTick.current);
             spinTick.current = null;
@@ -148,7 +148,7 @@ export function CasinoPanel({
               const lose = r.outcome === "miss";
               setLine({ text: LINES[r.outcome ?? "miss"](r), tone: lose ? "lose" : big ? "big" : "win" });
               if (lose) play("lose");
-              else if (big) fanfare();
+              else if (big) fanfare(undefined, undefined, "casino");
               else play("win");
               if (r.prize) setWon((w) => [{ ...r.prize!, redeemed: false }, ...w]);
             }

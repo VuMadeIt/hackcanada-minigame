@@ -25,6 +25,82 @@ const SOUNDS = {
 
 export type SoundName = keyof typeof SOUNDS;
 
+/** Each sound belongs to one slider in the sound menu. */
+export type SoundGroup = "tree" | "coins" | "casino";
+export const SOUND_GROUPS: { id: SoundGroup; label: string; sample: SoundName }[] = [
+  { id: "tree", label: "Chopping", sample: "chop" },
+  { id: "coins", label: "Coins & shop", sample: "coin" },
+  { id: "casino", label: "Casino", sample: "reelStop" },
+];
+const GROUP: Record<SoundName, SoundGroup> = {
+  chop: "tree",
+  chopAuto: "tree",
+  crit: "tree",
+  mega: "tree",
+  fell: "tree",
+  golden: "tree",
+  squeak: "tree",
+  sell: "coins",
+  coin: "coins",
+  buy: "coins",
+  deny: "coins",
+  click: "coins",
+  reel: "casino",
+  reelStop: "casino",
+  win: "casino",
+  lose: "casino",
+  whoosh: "casino",
+};
+
+export type Volumes = { master: number } & Record<SoundGroup, number>;
+const VOLUME_KEY = "timber-tycoon-volume";
+const DEFAULT_VOLUMES: Volumes = { master: 1, tree: 1, coins: 1, casino: 1 };
+let volumes: Volumes = { ...DEFAULT_VOLUMES };
+
+const clamp01 = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
+
+/** Reads saved slider levels; anything missing or broken falls back to full volume. */
+export function parseVolumes(raw: string | null): Volumes {
+  let saved: Record<string, unknown> = {};
+  try {
+    const v: unknown = raw ? JSON.parse(raw) : {};
+    if (v && typeof v === "object") saved = v as Record<string, unknown>;
+  } catch {
+    // a broken value just means default levels
+  }
+  const out = { ...DEFAULT_VOLUMES };
+  for (const k of Object.keys(out) as (keyof Volumes)[]) out[k] = clamp01(saved[k], out[k]);
+  return out;
+}
+
+export function loadVolumes(): Volumes {
+  try {
+    volumes = parseVolumes(localStorage.getItem(VOLUME_KEY));
+  } catch {
+    volumes = { ...DEFAULT_VOLUMES };
+  }
+  return { ...volumes };
+}
+
+export function setVolume(key: keyof Volumes, v: number): Volumes {
+  volumes = { ...volumes, [key]: clamp01(v, volumes[key]) };
+  try {
+    localStorage.setItem(VOLUME_KEY, JSON.stringify(volumes));
+  } catch {
+    // storage blocked: the level still applies until the tab closes
+  }
+  return { ...volumes };
+}
+
+/** How loud a sound plays right now, 0 to 1, before ZzFX's own master volume. */
+export function gainFor(group: SoundGroup, v: Volumes = volumes) {
+  return v.master * v[group];
+}
+
+export function groupOf(name: SoundName) {
+  return GROUP[name];
+}
+
 type Zzfx = typeof import("zzfx");
 let lib: Zzfx | null = null;
 let loading: Promise<void> | null = null;
@@ -51,10 +127,13 @@ export function isMuted() {
 /** pitch: 1 is normal. minGapMs stops 20 chops a second turning into mush. */
 export function play(name: SoundName, pitch = 1, minGapMs = 18) {
   if (muted || !lib) return;
+  const gain = gainFor(GROUP[name]);
+  if (gain <= 0) return;
   const now = performance.now();
   if (now - (lastPlayed[name] ?? 0) < minGapMs) return;
   lastPlayed[name] = now;
   const p = [...SOUNDS[name]] as number[];
+  p[0] = (p[0] ?? 1) * gain;
   p[2] = (p[2] ?? 220) * pitch;
   try {
     lib.zzfx(...p);
@@ -64,11 +143,12 @@ export function play(name: SoundName, pitch = 1, minGapMs = 18) {
 }
 
 /** a quick rising arpeggio, for level ups and big wins */
-export function fanfare(notes = [523, 659, 784, 1047], gap = 70) {
+export function fanfare(notes = [523, 659, 784, 1047], gap = 70, group: SoundGroup = "coins") {
   notes.forEach((f, i) =>
     setTimeout(() => {
-      if (muted || !lib) return;
-      lib.zzfx(...[1, 0.02, f, 0.01, 0.08, 0.2, 0, 1.6, , , , , , , , , , 0.7, 0.04]);
+      const gain = gainFor(group);
+      if (muted || !lib || gain <= 0) return;
+      lib.zzfx(...[gain, 0.02, f, 0.01, 0.08, 0.2, 0, 1.6, , , , , , , , , , 0.7, 0.04]);
     }, i * gap),
   );
 }

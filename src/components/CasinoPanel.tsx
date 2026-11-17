@@ -46,6 +46,7 @@ export function CasinoPanel({
   onPickName,
   testTools,
   onBoost,
+  onDropLeaf,
 }: {
   s: GameState;
   now: number;
@@ -59,6 +60,7 @@ export function CasinoPanel({
   onPickName?: (name: string) => Promise<boolean>;
   testTools: boolean;
   onBoost: (what: Net.BoostKind) => Promise<void>;
+  onDropLeaf?: () => void;
 }) {
   const [reels, setReels] = useState<Reels>(["seven", "coin", "log"]);
   const [stopped, setStopped] = useState<[boolean, boolean, boolean]>([true, true, true]);
@@ -162,7 +164,7 @@ export function CasinoPanel({
 
   const lvl = levelFor(s.lifetimeWood);
   const signInBox = !signedIn && onPickName ? <PickName onPick={onPickName} /> : null;
-  const tools = signedIn && testTools ? <TestTools busy={busy} open={open} onBoost={onBoost} /> : null;
+  const tools = signedIn && testTools ? <TestTools busy={busy} open={open} onBoost={onBoost} onDropLeaf={onDropLeaf} /> : null;
 
   return (
     <Panel title="Casino" onClose={onClose} className="casino">
@@ -272,7 +274,17 @@ function PickName({ onPick }: { onPick: (name: string) => Promise<boolean> }) {
   );
 }
 
-function TestTools({ busy, open, onBoost }: { busy: boolean; open: boolean; onBoost: (what: Net.BoostKind) => Promise<void> }) {
+function TestTools({
+  busy,
+  open,
+  onBoost,
+  onDropLeaf,
+}: {
+  busy: boolean;
+  open: boolean;
+  onBoost: (what: Net.BoostKind) => Promise<void>;
+  onDropLeaf?: () => void;
+}) {
   const [working, setWorking] = useState(false);
   const run = async (what: Net.BoostKind) => {
     setWorking(true);
@@ -299,6 +311,11 @@ function TestTools({ busy, open, onBoost }: { busy: boolean; open: boolean; onBo
               +10 free spins
             </PxButton>
           </>
+        )}
+        {onDropLeaf && (
+          <PxButton tone="blue" onClick={onDropLeaf} disabled={off} data-testid="drop-leaf">
+            Drop a golden leaf
+          </PxButton>
         )}
       </div>
     </div>

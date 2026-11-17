@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { applyOutcome, ODDS, PAIR_ODDS, PAYOUT, roll, spinCost } from "@/game/casino";
+import { applyOutcome, ODDS, PAIR_ODDS, PAYOUT, passiveWoodPerSec, roll, spinCost } from "@/game/casino";
 import { UPGRADES } from "@/game/config";
-import { buyBuilding } from "@/game/engine";
+import { buyBuilding, derive } from "@/game/engine";
 import { newGame } from "@/game/state";
 
 function seeded(seed: number) {
@@ -95,14 +95,17 @@ describe("slot machine", () => {
     }
   });
 
-  it("prices spins off your axe, not your buildings", () => {
+  it("prices a spin at about 15 minutes of passive income, whatever your axe", () => {
     const s = newGame(0);
-    const early = spinCost(s, 0);
-    expect(early).toBeGreaterThanOrEqual(50);
+    expect(spinCost(s, 0)).toBeGreaterThanOrEqual(50);
     s.coins = 1e12;
-    for (let i = 0; i < 40; i++) buyBuilding(s, "beaver");
-    expect(spinCost(s, 0)).toBe(early);
-    s.tool = 3;
-    expect(spinCost(s, 0)).toBeGreaterThan(early);
+    for (let i = 0; i < 20; i++) buyBuilding(s, "paper_mill");
+    const d = derive(s, 0);
+    const quarterHour = passiveWoodPerSec(d) * 15 * 60 * d.priceBase;
+    const cost = spinCost(s, 0);
+    expect(cost).toBeGreaterThanOrEqual(quarterHour);
+    expect(cost).toBeLessThan(quarterHour * 1.1);
+    s.tool = 2;
+    expect(spinCost(s, 0)).toBe(cost);
   });
 });

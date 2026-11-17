@@ -6,7 +6,7 @@
  *   npm run sim -- 8       # just the first 8 hours
  */
 import { BUILDINGS, CASINO_UNLOCK_LEVEL, TOOLS, UPGRADES, ZONES } from "../src/game/config";
-import { applyOutcome, roll, spinCost } from "../src/game/casino";
+import { applyOutcome, passiveWoodPerSec, roll, spinCost } from "../src/game/casino";
 import * as E from "../src/game/engine";
 import { newGame, type GameState } from "../src/game/state";
 
@@ -21,7 +21,7 @@ interface Persona {
   tabOpen: boolean;
   /** buys whatever adds the most wood per coin, instead of the cheapest thing */
   minmax: boolean;
-  /** chance of catching a golden beaver while playing */
+  /** chance of catching a golden leaf while playing */
   catchRate: number;
 }
 
@@ -126,9 +126,8 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
   const rtps: string[] = [];
   let buys = 0;
   let playSec = 0;
-  // how many spins the chopping alone pays for, counted over the first 3 hours of actual play
-  let chopSpins = 0;
-  let chopSpinsAt3h: number | null = null;
+  // spins an hour that passive income alone pays for, once the casino is open
+  const passiveSpins: [number, number][] = [];
   const checkpoints = [1 / 12, 1 / 6, 0.25, 0.5, 1, 2, 4, 8, 12, 24, 36].filter((h) => h <= hours);
   const snaps: string[] = [];
   const log = (what: string) => {
@@ -139,6 +138,10 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
   const snap = (st = s, at = now) => {
     while (checkpoints.length && at >= checkpoints[0] * 3600_000) {
       if ([4, 12, 36].includes(checkpoints[0]) && casinoAt !== null) rtps.push(`${checkpoints[0]}h ${rtp(st, at)}`);
+      if (checkpoints[0] >= 1 && casinoAt !== null) {
+        const d = E.derive(st, at);
+        passiveSpins.push([checkpoints[0], (passiveWoodPerSec(d) * 3600 * d.priceBase) / spinCost(st, at)]);
+      }
       snaps.push(`${fmtT(checkpoints.shift()! * 3600)}: Lv ${E.levelFor(st.lifetimeWood)}, ${fmtN(st.lifetimeWood)} wood`);
       if (process.env.SIM_DEBUG) {
         const d = E.derive(st, at);
@@ -157,12 +160,7 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
       now += step;
       playSec += step / 1000;
       const clicks = p.cps * (step / 1000) + (rng() < (p.cps * (step / 1000)) % 1 ? 1 : 0);
-      const w0 = s.lifetimeWood;
       for (let i = 0; i < Math.floor(clicks); i++) E.chop(s, now - step + (i * step) / clicks, rng);
-      if (chopSpinsAt3h === null) {
-        chopSpins += ((s.lifetimeWood - w0) * E.derive(s, now).priceBase) / spinCost(s, now);
-        if (playSec >= 3 * 3600) chopSpinsAt3h = chopSpins;
-      }
       E.tick(s, step / 1000, now, rng);
       if (now >= s.nextGoldenAt) {
         if (rng() < p.catchRate) E.catchGolden(s, now, rng);
@@ -207,13 +205,13 @@ export function run(p: Persona, hours: number, seed = 1, quiet = false) {
   }
   if (casinoAt === null && E.levelFor(s.lifetimeWood) >= CASINO_UNLOCK_LEVEL) casinoAt = now / 1000;
 
-  const result = { casinoAt, worstGap, firsts, s, chopSpinsAt3h };
+  const result = { casinoAt, worstGap, firsts, s, passiveSpins };
   if (quiet) return result;
   const at = (k: string) => (firsts.has(k) ? fmtT(firsts.get(k)!) : "never");
   console.log(`\n## ${p.name}`);
   console.log(`  first buy ${fmtT([...firsts.values()][0] ?? 0)} | casino (Lv ${CASINO_UNLOCK_LEVEL}) ${casinoAt === null ? "never" : fmtT(casinoAt)} | ${buys} purchases`);
   console.log(`  longest stretch of play with nothing bought: ${Math.round(worstGap)}s (ending at ${fmtT(worstGapAt)})`);
-  console.log(`  spins paid for by 3 hours of chopping: ${chopSpinsAt3h === null ? "never played 3 hours" : chopSpinsAt3h.toFixed(1)}`);
+  console.log(`  spins an hour from passive income alone: ${passiveSpins.map(([h, n]) => `${h}h ${n.toFixed(1)}`).join(", ") || "casino not open yet"}`);
   console.log(`  casino return per coin bet, not counting 777: ${rtps.join(", ")}`);
   console.log(`  tools: ${TOOLS.slice(1).map((t) => `${t.name.replace(" Axe", "")} ${at(t.name)}`).join(", ")}`);
   console.log(`  ${snaps.join(" | ")}`);

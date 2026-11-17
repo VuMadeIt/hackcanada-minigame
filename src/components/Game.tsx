@@ -70,9 +70,11 @@ interface Banner {
 }
 interface Golden {
   key: number;
-  y: number;
+  /** where it starts falling, % across the stage */
+  x: number;
+  /** seconds for one swing side to side */
+  sway: number;
   until: number;
-  flip: boolean;
 }
 
 function unlockLine(level: number): string {
@@ -284,10 +286,10 @@ export default function Game() {
 
       const g = goldenRef.current;
       if (!g && t >= st.nextGoldenAt && !document.hidden) {
-        const ng = { key: t, y: 18 + Math.random() * 45, until: t + GOLDEN.visibleSec * 1000, flip: Math.random() < 0.5 };
+        const ng = { key: t, x: 15 + Math.random() * 60, sway: 1.1 + Math.random() * 0.5, until: t + GOLDEN.visibleSec * 1000 };
         goldenRef.current = ng;
         setGolden(ng);
-        play("squeak");
+        play("chime");
       } else if (g && t > g.until) {
         goldenRef.current = null;
         setGolden(null);
@@ -535,7 +537,7 @@ export default function Game() {
     [bought],
   );
 
-  const catchGoldenBeaver = useCallback(
+  const catchGoldenLeaf = useCallback(
     (e: React.PointerEvent) => {
       const s = sRef.current;
       if (!s || !goldenRef.current) return;
@@ -550,7 +552,7 @@ export default function Game() {
       fanfare([784, 988, 1175, 1568], 55, "tree");
       if (r.kind === "frenzy") showBanner({ title: "FRENZY!", sub: `x${GOLDEN.frenzyMult} wood for ${GOLDEN.frenzySec} seconds. Go go go.`, tone: "gold" });
       else if (r.kind === "pile") {
-        showBanner({ title: "Log pile!", sub: `The golden beaver left you ${fmt(r.amount)} wood.`, tone: "gold" });
+        showBanner({ title: "Log pile!", sub: `The golden leaf left you ${fmt(r.amount)} wood.`, tone: "gold" });
         fx.text(e.clientX, e.clientY - 30, `+${fmt(r.amount)}`, { size: 34, color: "#ffd23f", life: 1.6 });
       } else showBanner({ title: "CHOP STORM!", sub: `Every hit is a crit for ${GOLDEN.stormSec} seconds.`, tone: "gold" });
       refresh();
@@ -690,13 +692,16 @@ export default function Game() {
             {golden && (
               <button
                 key={golden.key}
-                className={`golden ${golden.flip ? "flip" : ""}`}
-                style={{ top: `${golden.y}%`, animationDuration: `${GOLDEN.visibleSec}s` }}
-                onPointerDown={catchGoldenBeaver}
-                aria-label="Golden beaver! Click it"
+                className="golden"
+                style={{ left: `${golden.x}%`, animationDuration: `${GOLDEN.visibleSec}s` }}
+                onPointerDown={catchGoldenLeaf}
+                aria-label="Golden maple leaf! Click it"
+                data-testid="golden"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={spriteUrl("beaver/golden")} alt="" draggable={false} />
+                <span className="leaf-sway" style={{ animationDuration: `${golden.sway}s` }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={spriteUrl("leaf/golden")} alt="" draggable={false} />
+                </span>
               </button>
             )}
 
@@ -782,6 +787,10 @@ export default function Game() {
               onPickName={Net.canPickName() ? pickName : undefined}
               testTools={Net.hasTestTools()}
               onBoost={boost}
+              onDropLeaf={() => {
+                if (sRef.current) sRef.current.nextGoldenAt = Date.now();
+                setPanel(null);
+              }}
               pending={spinning.current}
               onStart={() => {
                 spinning.current = true;

@@ -46,13 +46,13 @@ export function checkSave(prev: Stored, incoming: unknown, now: number, opts: { 
     return { ok: false, reason: "spent_mismatch" };
   }
 
-  // a frenzy only comes from catching a golden beaver, so it can't run longer than one does
+  // a frenzy only comes from catching a golden leaf, so it can't run longer than one does
   const maxBuffAt = now + Math.max(GOLDEN.frenzySec, GOLDEN.stormSec) * 1000 + 5000;
   // clamp rather than reject, since the browser clock can be a bit off from ours
   s.frenzyUntil = Math.min(s.frenzyUntil, maxBuffAt);
   s.stormUntil = Math.min(s.stormUntil, maxBuffAt);
 
-  // speed limit: perfect play without frenzy, plus a frenzy and a log pile from every golden beaver
+  // speed limit: perfect play without frenzy, plus a frenzy and a log pile from every golden leaf
   // that could have shown up in that time
   const dt = Math.max(1, (now - prev.savedAt) / 1000) + (opts.firstImport ? 3 * 3600 : 0);
   const base = Math.max(woodRateCeiling(p), woodRateCeiling(s)) / GOLDEN.frenzyMult;

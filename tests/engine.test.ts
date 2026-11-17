@@ -181,7 +181,7 @@ describe("market and passive income", () => {
   });
 });
 
-describe("golden beaver", () => {
+describe("golden leaf", () => {
   it("frenzy multiplies chops by 7", () => {
     const s = newGame(0);
     expect(catchGolden(s, 0, always).kind).toBe("frenzy");

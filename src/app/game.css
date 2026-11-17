@@ -228,22 +228,48 @@
 .camp-item { position: relative; background: rgba(42, 22, 11, 0.45); padding: 3px; border: 2px solid rgba(42, 22, 11, 0.8); }
 .camp-item span { position: absolute; right: -4px; bottom: -6px; font-size: 12px; font-weight: 700; color: #fff; text-shadow: 1px 1px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); }
 
+/* golden maple leaf: drifts down over the stage, rocking side to side like a real leaf */
 .golden {
   position: absolute;
-  left: -90px;
-  width: 84px;
+  top: -12%;
+  width: 64px;
+  height: 64px;
+  margin-left: -32px;
+  padding: 0;
   border: none;
   background: none;
+  cursor: pointer;
   z-index: 6;
-  animation: run linear forwards;
-  filter: drop-shadow(0 0 8px rgba(255, 220, 60, 0.9));
+  animation: leaf-fall linear forwards;
+  -webkit-tap-highlight-color: transparent;
 }
-.golden img { width: 100%; animation: hop 0.35s infinite alternate; }
-.golden.flip { animation-name: run-back; left: auto; right: -90px; }
-.golden.flip img { transform: scaleX(-1); }
-@keyframes run { to { left: calc(100% + 90px); } }
-@keyframes run-back { to { right: calc(100% + 90px); } }
-@keyframes hop { to { translate: 0 -10px; } }
+.leaf-sway {
+  display: block;
+  width: 100%;
+  height: 100%;
+  animation: leaf-swing ease-in-out infinite alternate;
+}
+.leaf-sway img {
+  width: 100%;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 6px rgba(255, 220, 60, 0.95)) drop-shadow(0 0 14px rgba(255, 190, 40, 0.6));
+  animation: leaf-flutter 0.45s ease-in-out infinite alternate;
+}
+@keyframes leaf-fall {
+  0% { top: -12%; opacity: 1; }
+  92% { opacity: 1; }
+  100% { top: 96%; opacity: 0; }
+}
+/* a pendulum: fastest and lowest through the middle, slowing and lifting a little at each end */
+@keyframes leaf-swing {
+  0% { transform: translate(-48px, -10px) rotate(-32deg); animation-timing-function: ease-in; }
+  50% { transform: translate(0, 6px) rotate(0deg); animation-timing-function: ease-out; }
+  100% { transform: translate(48px, -10px) rotate(32deg); }
+}
+@keyframes leaf-flutter {
+  from { transform: rotateY(0deg) rotateX(8deg); }
+  to { transform: rotateY(55deg) rotateX(-8deg); }
+}
 
 .banner {
   position: absolute;

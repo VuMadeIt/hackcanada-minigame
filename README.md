@@ -65,6 +65,6 @@ The browser runs the game and saves every 20 seconds. The server doesn't trust t
   possible price) or from the casino
 - everything you own has to add up to coins you actually earned
 - lifetime wood can't grow faster than perfect play would allow since the last save (a 20 clicks/s
-  autoclicker that crits on every click, plus every golden beaver)
+  autoclicker that crits on every click, plus every golden leaf)
 
 A save that fails is thrown away and the browser gets the last good save back.

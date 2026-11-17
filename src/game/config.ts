@@ -50,7 +50,7 @@ export const UPGRADES: Upgrade[] = [
   { id: "robo_arm", name: "Robo Arm", icon: "shop/robot_arm", baseCost: 1_500, growth: 2.0, max: 30, unlockLevel: 6, blurb: "Chops once a second for you" },
   { id: "bone_meal", name: "Bone Meal", icon: "shop/fertilizer", baseCost: 2_000, growth: 2.1, max: 50, unlockLevel: 7, blurb: "+15% wood/s from everything you own" },
   { id: "haggling", name: "Haggling", icon: "shop/money_bag", baseCost: 3_000, growth: 2.2, max: 30, unlockLevel: 8, blurb: "+8% sell price" },
-  { id: "lucky_sapling", name: "Lucky Sapling", icon: "shop/golden_tree", baseCost: 6_000, growth: 2.1, max: 15, unlockLevel: 9, blurb: "+1.5% crit chance, golden beaver shows up more" },
+  { id: "lucky_sapling", name: "Lucky Sapling", icon: "shop/golden_tree", baseCost: 6_000, growth: 2.1, max: 15, unlockLevel: 9, blurb: "+1.5% crit chance, golden leaf falls more often" },
   { id: "gnome", name: "Gnome Accountant", icon: "shop/gnome", baseCost: 25_000, growth: 2.4, max: 10, unlockLevel: 11, blurb: "Sells 1% of your wood every second" },
 ];
 
@@ -138,10 +138,11 @@ export const MARKET = {
 };
 
 export const GOLDEN = {
-  minGapSec: 120,
-  maxGapSec: 300,
+  // about once every 30 minutes, sooner with Lucky Sapling
+  minGapSec: 1500,
+  maxGapSec: 2100,
   luckyGapCut: 0.04,
-  visibleSec: 9,
+  visibleSec: 6,
   frenzyMult: 7,
   frenzySec: 20,
   stormSec: 12,

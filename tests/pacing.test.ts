@@ -25,9 +25,12 @@ describe("pacing", () => {
     expect(promptGap.firsts.get("Chainsaw") ?? Infinity).toBeGreaterThan(8 * 3600);
   });
 
-  it("pays for about 4 spins with 3 hours of chopping", () => {
-    expect(promptGap.chopSpinsAt3h).toBeGreaterThan(3);
-    expect(promptGap.chopSpinsAt3h).toBeLessThan(6);
+  it("lets passive income alone pay for about 4 spins an hour once the casino is open", () => {
+    expect(promptGap.passiveSpins.length).toBeGreaterThan(3);
+    for (const [, n] of promptGap.passiveSpins) {
+      expect(n).toBeGreaterThan(3);
+      expect(n).toBeLessThanOrEqual(4);
+    }
   });
 
   it("always has something to buy within a couple of minutes of play", () => {

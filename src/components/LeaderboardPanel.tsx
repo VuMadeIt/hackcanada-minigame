@@ -63,7 +63,11 @@ export function LeaderboardPanel({ myWood, onClose }: { myWood: number; onClose:
           </span>
         </div>
       )}
-      {board && !Net.signedIn() && <p className="board-empty">Open the game from the Hack Canada dashboard to get on the board.</p>}
+      {board && !Net.signedIn() && (
+        <p className="board-empty">
+          {Net.canPickName() ? "Pick a name in the casino to get on the board." : "Open the game from the Hack Canada dashboard to get on the board."}
+        </p>
+      )}
       {board && board.players > 0 && <p className="board-foot">{fmt(board.players)} hackers chopping</p>}
     </Panel>
   );

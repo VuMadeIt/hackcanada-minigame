@@ -104,6 +104,7 @@
   background-size: cover;
   background-position: center bottom;
   image-rendering: pixelated;
+  container-type: size;
 }
 .frenzy-on .stage::after {
   content: "";
@@ -133,7 +134,8 @@
   position: absolute;
   left: 50%;
   bottom: 4%;
-  height: 84%;
+  /* never wider than the stage, so tall phones don't crop the trunk */
+  height: min(84cqh, 92cqw);
   aspect-ratio: 120 / 140;
   translate: -58% 0;
   display: flex;
@@ -173,7 +175,7 @@
 .sound-toggle.off { color: #8a5a36; background: rgba(214, 190, 150, 0.94); }
 .sound-toggle.levels { padding: 5px 6px; }
 .sound-toggle.levels.open { background: #fff1cf; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (min-height: 561px), (max-aspect-ratio: 4/5) {
   .sound-toggle span { display: none; }
   .sound-box { top: 82px; }
 }
@@ -205,7 +207,7 @@
   position: absolute;
   right: 3%;
   bottom: -3%;
-  height: 52%;
+  height: min(52cqh, 58cqw);
   transform-origin: 85% 95%;
   pointer-events: none;
   z-index: 4;
@@ -360,9 +362,6 @@
 .chip { padding: 2px 8px 3px; background: var(--paper-dk); border: 2px solid var(--ink); font-size: 12px; font-weight: 700; }
 .chip.on { background: var(--wood); color: #fff; }
 .zone-thumb { width: 64px; height: 40px; border: 3px solid var(--ink); background-size: cover; image-rendering: pixelated; flex: none; }
-.zone-thumb.meadow { background-image: url(/sprites/bg/meadow.png); }
-.zone-thumb.autumn { background-image: url(/sprites/bg/autumn.png); }
-.zone-thumb.night { background-image: url(/sprites/bg/night.png); }
 
 /* ---------- modal ---------- */
 .modal-back { position: fixed; inset: 0; background: rgba(20, 10, 4, 0.6); display: grid; place-items: center; z-index: 40; }
@@ -385,7 +384,7 @@
 .modal-big { display: flex; align-items: center; gap: 6px; font-size: 26px !important; font-weight: 700; color: var(--wood-dk) !important; }
 
 /* ---------- small screens (narrow dashboard iframes, phones) ---------- */
-@media (max-width: 760px) {
+@media (max-width: 760px) and (min-height: 561px), (max-aspect-ratio: 4/5) {
   .game { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto; }
   .hud { flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 4px solid var(--ink); padding: 4px; gap: 4px; max-height: 32vh; }
   .hud-card { padding: 3px 6px; }
@@ -397,14 +396,15 @@
   .rail-btn { flex: 1; }
   .half { display: none; }
   .panel { right: 4px; left: 4px; width: auto; bottom: 72px; }
-  .tree { height: 78%; }
-  .paw { height: 40%; }
+  .tree { height: min(78cqh, 92cqw); }
+  .hint { bottom: auto; top: 30%; font-size: 14px; white-space: nowrap; }
+  .paw { height: min(40cqh, 50cqw); }
 }
 @media (max-height: 560px) {
   .hud .stats { display: none; }
 }
 .who { font-size: 11px; font-weight: 700; color: var(--paper); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 760px) { .who { display: none; } }
+@media (max-width: 760px) and (min-height: 561px), (max-aspect-ratio: 4/5) { .who { display: none; } }
 
 /* ---------- casino ---------- */
 .casino .panel-body { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -462,3 +462,17 @@
 .test-tools small { color: #4b5d78; font-size: 12px; }
 .test-tools div { display: flex; flex-wrap: wrap; gap: 6px; }
 .test-tools .px-btn { font-size: 13px; padding: 4px 8px; }
+
+/* landscape phones: icon-only sound buttons so they clear the tree label */
+@media (max-height: 560px) {
+  .sound-toggle span { display: none; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .game { grid-template-columns: 180px 1fr 88px; grid-template-rows: 100%; }
+  .hud, .rail { min-height: 0; overflow-y: auto; }
+}
+
+/* big monitors: scale the whole UI up so the side panels stay readable */
+@media (min-width: 2200px) and (min-height: 1200px) {
+  .game { zoom: 1.4; }
+}

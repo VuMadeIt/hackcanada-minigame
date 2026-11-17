@@ -388,3 +388,16 @@
 .won-row { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; font-size: 13px; }
 .won-row code { font-weight: 700; background: var(--paper); padding: 0 4px; }
 .won-row small { color: #7a5130; width: 100%; }
+
+/* ---------- leaderboard ---------- */
+.board-sub { font-size: 13px; color: #7a5130; margin-bottom: 6px; }
+.board-empty { font-size: 14px; color: #7a5130; text-align: center; margin: 16px 0; }
+.board-list { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.board-list li, .board-me { display: grid; grid-template-columns: 30px 1fr auto 92px; align-items: center; gap: 6px; padding: 3px 6px; background: var(--paper); border: 2px solid var(--paper-dk); font-size: 14px; color: var(--wood-dk); }
+.board-list li.you, .board-me { background: #fff4c2; border-color: #e5a51f; }
+.board-me { grid-template-columns: 30px 1fr 92px; margin-top: 8px; }
+.board .rank { display: grid; place-items: center; height: 22px; background: var(--paper-dk); color: var(--ink); font-weight: 700; }
+.board .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .lv { font-size: 12px; color: #7a5130; }
+.board .wd { text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 3px; font-weight: 700; }
+.board-foot { margin-top: 8px; font-size: 12px; color: #7a5130; text-align: center; }

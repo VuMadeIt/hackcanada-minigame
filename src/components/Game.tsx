@@ -9,6 +9,7 @@ import { newGame, normalize, type GameState } from "@/game/state";
 import { Fx } from "./fx";
 import * as Net from "./net";
 import { CasinoPanel } from "./CasinoPanel";
+import { LeaderboardPanel } from "./LeaderboardPanel";
 import { Hud } from "./Hud";
 import { ShopPanel, shopBadge } from "./ShopPanel";
 import { spriteUrl } from "./sprites";
@@ -50,7 +51,7 @@ const LEAVES: Record<ZoneId, string[]> = {
 };
 const BG: Record<ZoneId, string> = { meadow: "bg/meadow", autumn: "bg/autumn", night: "bg/night" };
 
-type PanelId = null | "shop" | "casino";
+type PanelId = null | "shop" | "casino" | "board";
 interface Banner {
   key: number;
   title: string;
@@ -615,12 +616,26 @@ export default function Game() {
               <span>CASINO</span>
               {lvl < CASINO_UNLOCK_LEVEL ? <small>Lv {CASINO_UNLOCK_LEVEL}</small> : freeSpins > 0 && <i className="badge">{freeSpins}</i>}
             </PxButton>
+            <PxButton
+              tone="wood"
+              className={`rail-btn ${panel === "board" ? "on" : ""}`}
+              onClick={() => {
+                unlockAudio();
+                play("click");
+                setPanel(panel === "board" ? null : "board");
+              }}
+              data-testid="open-board"
+            >
+              <Icon name="shop/trophy" size={22} />
+              <span>RANKS</span>
+            </PxButton>
             <div className="rail-spacer" />
             <button className="mute" onClick={toggleMute} aria-label={muted ? "Turn sound on" : "Turn sound off"}>
               {muted ? "SFX off" : "SFX on"}
             </button>
           </nav>
 
+          {panel === "board" && <LeaderboardPanel myWood={s.lifetimeWood} onClose={() => setPanel(null)} />}
           {panel === "shop" && <ShopPanel s={s} now={now} onClose={() => setPanel(null)} act={shopActions} />}
           {panel === "casino" && (
             <CasinoPanel

@@ -107,7 +107,7 @@ def save(im, name):
 meta = {}
 
 SINGLES = {
-    "tree/oak": ("tree/1.png", 120),
+    "tree/oak": ("tree/oak_full.png", 120),
     "tree/maple": ("tree/2.png", 120),
     "tree/birch": ("tree/3.png", 104),
     "tree/ancient": ("tree/4.png", 130),

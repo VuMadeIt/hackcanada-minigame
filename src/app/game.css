@@ -354,3 +354,5 @@
 @media (max-height: 560px) {
   .hud .stats { display: none; }
 }
+.who { font-size: 11px; font-weight: 700; color: var(--paper); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 760px) { .who { display: none; } }

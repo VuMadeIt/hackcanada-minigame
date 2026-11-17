@@ -7,12 +7,14 @@ import { fmt, fmtTime } from "@/game/format";
 import { fanfare, play, setMuted, unlockAudio } from "@/game/sound";
 import { newGame, normalize, type GameState } from "@/game/state";
 import { Fx } from "./fx";
+import * as Net from "./net";
 import { Hud } from "./Hud";
 import { ShopPanel, shopBadge } from "./ShopPanel";
 import { spriteUrl } from "./sprites";
 import { Icon, PxButton } from "./ui";
 
 const SAVE_KEY = "timber-tycoon-save";
+const OWNER_KEY = "timber-tycoon-save-owner";
 const MUTE_KEY = "timber-tycoon-muted";
 const TAB_KEY = "timber-tycoon-tab";
 
@@ -95,6 +97,7 @@ export default function Game() {
   const [welcome, setWelcome] = useState<{ sec: number; wood: number } | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [golden, setGolden] = useState<Golden | null>(null);
+  const [player, setPlayer] = useState<Net.Player | null>(null);
   const goldenRef = useRef<Golden | null>(null);
   const [elsewhere, setElsewhere] = useState(false);
   const elsewhereRef = useRef(false);
@@ -166,9 +169,42 @@ export default function Game() {
     fx.font = getComputedStyle(document.body).fontFamily;
     setReady(true);
 
+    let alive = true;
+    const adopt = (ns: GameState, withOffline: boolean) => {
+      const t = Date.now();
+      if (withOffline) {
+        const back = E.applyOffline(ns, t);
+        setWelcome(back.wood > 0 ? back : null);
+      }
+      if (ns.nextGoldenAt < t) E.scheduleGolden(ns, t, Math.random);
+      sRef.current = ns;
+      save();
+      refresh();
+    };
+    void Net.connect().then(async (hello) => {
+      if (!alive || !hello) return;
+      setPlayer(hello.player);
+      const local = sRef.current!;
+      const mine = hello.fresh || store.get(OWNER_KEY) === hello.player.id;
+      store.set(OWNER_KEY, hello.player.id);
+      // savedAt, not lifetime wood: a sale or purchase changes the save without adding wood
+      // a brand new server save is always empty, so bring whatever this browser has along
+      const newer = hello.fresh
+        ? local.lifetimeWood > 0
+        : local.savedAt > hello.state.savedAt && local.lifetimeWood >= hello.state.lifetimeWood;
+      if (mine && newer) {
+        const r = await Net.push(local, { import: hello.fresh });
+        // no state back means the request itself failed; keep playing on the local save
+        if (!r.ok && r.state) adopt(r.state, true);
+      } else {
+        adopt(hello.state, true);
+      }
+    });
+
     let last = Date.now();
     let lastUi = 0;
     let lastSave = now;
+    let lastPush = now;
     let passivePing = 0;
     let passiveAcc = 0;
     let gnomeAcc = 0;
@@ -237,6 +273,12 @@ export default function Game() {
         lastSave = t;
         save();
       }
+      if (t - lastPush > 20000 && Net.signedIn()) {
+        lastPush = t;
+        void Net.push(st).then((r) => {
+          if (!r.ok && r.state && alive) adopt(r.state, false);
+        });
+      }
     };
 
     const loop = () => {
@@ -246,16 +288,25 @@ export default function Game() {
     raf = requestAnimationFrame(loop);
     // rAF stops in background tabs; keep income ticking slowly there
     const bg = setInterval(() => document.hidden && step(), 1000);
-    const onHide = () => document.hidden && save();
+    const onHide = () => {
+      if (!document.hidden) return;
+      save();
+      void Net.push(sRef.current!);
+    };
+    const onLeave = () => {
+      save();
+      Net.pushBeacon(sRef.current!);
+    };
     document.addEventListener("visibilitychange", onHide);
-    window.addEventListener("pagehide", save);
+    window.addEventListener("pagehide", onLeave);
 
     return () => {
       cancelAnimationFrame(raf);
       clearInterval(bg);
       document.removeEventListener("visibilitychange", onHide);
-      window.removeEventListener("pagehide", save);
+      window.removeEventListener("pagehide", onLeave);
       window.removeEventListener("storage", onStorage);
+      alive = false;
       fx.detach();
       save();
     };
@@ -515,6 +566,11 @@ export default function Game() {
           </main>
 
           <nav className="rail">
+            {player && (
+              <div className="who" title={`Signed in as ${player.name}`}>
+                {player.name}
+              </div>
+            )}
             <PxButton ref={sellRef} tone="green" className="rail-btn sell" onClick={() => doSell(1)} data-testid="sell">
               <Icon name="currency/coin" size={22} />
               <span>SELL</span>

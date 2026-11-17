@@ -1,9 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Pixelify_Sans } from "next/font/google";
+import { Tiny5 } from "next/font/google";
 import "./globals.css";
 import "./game.css";
 
-const pixel = Pixelify_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap" });
+// Tiny5 keeps C, 5 and S apart at small sizes, which matters in a game made of numbers
+const pixel = Tiny5({ subsets: ["latin"], weight: "400", display: "swap" });
 
 export const metadata: Metadata = {
   title: "Timber Tycoon",

@@ -4,3 +4,8 @@ body { -webkit-font-smoothing: none; font-smooth: never; user-select: none; -web
 img { image-rendering: pixelated; }
 button { font: inherit; color: inherit; cursor: pointer; }
 button:disabled { cursor: not-allowed; }
+.admin { padding: 24px; color: #f6e2b3; overflow: auto; height: 100%; font-size: 15px; }
+.admin h1, .admin h2 { margin: 12px 0 8px; }
+.admin table { border-collapse: collapse; }
+.admin td, .admin th { border: 1px solid #8a5a2b; padding: 4px 10px; text-align: left; }
+.admin button { padding: 2px 8px; }

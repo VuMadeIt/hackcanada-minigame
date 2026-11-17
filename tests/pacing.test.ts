@@ -25,6 +25,11 @@ describe("pacing", () => {
     expect(promptGap.firsts.get("Chainsaw") ?? Infinity).toBeGreaterThan(8 * 3600);
   });
 
+  it("pays for about 4 spins with 3 hours of chopping", () => {
+    expect(promptGap.chopSpinsAt3h).toBeGreaterThan(3);
+    expect(promptGap.chopSpinsAt3h).toBeLessThan(6);
+  });
+
   it("always has something to buy within a couple of minutes of play", () => {
     expect(promptGap.worstGap).toBeLessThanOrEqual(150);
   });

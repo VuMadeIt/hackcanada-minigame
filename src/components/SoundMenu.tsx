@@ -8,8 +8,18 @@ const ROWS: { id: keyof Volumes; label: string; sample: Parameters<typeof play>[
   ...SOUND_GROUPS,
 ];
 
-/** The speaker button (mute everything) plus a menu with a volume slider per kind of sound. */
-export function SoundMenu({ muted, onToggleMute }: { muted: boolean; onToggleMute: () => void }) {
+/** The speaker button (mute everything), the pop-up text button, and a menu with a volume slider per kind of sound. */
+export function SoundMenu({
+  muted,
+  onToggleMute,
+  textOff,
+  onToggleText,
+}: {
+  muted: boolean;
+  onToggleMute: () => void;
+  textOff: boolean;
+  onToggleText: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [vol, setVol] = useState<Volumes | null>(null);
   const box = useRef<HTMLDivElement>(null);
@@ -44,6 +54,17 @@ export function SoundMenu({ muted, onToggleMute }: { muted: boolean; onToggleMut
       >
         <SpeakerIcon off={muted} />
         <span>{muted ? "Sound off" : "Sound on"}</span>
+      </button>
+      <button
+        className={`sound-toggle ${textOff ? "off" : ""}`}
+        onClick={onToggleText}
+        aria-label={textOff ? "Show pop-up text" : "Hide pop-up text"}
+        aria-pressed={!textOff}
+        title={textOff ? "Pop-up text off (T)" : "Pop-up text on (T)"}
+        data-testid="text-toggle"
+      >
+        <TextIcon off={textOff} />
+        <span>{textOff ? "Text off" : "Text on"}</span>
       </button>
       <button
         className={`sound-toggle levels ${open ? "open" : ""}`}
@@ -93,6 +114,15 @@ function SpeakerIcon({ off }: { off: boolean }) {
       ) : (
         <path d="M10 6h1v4h-1zM12 4h1v1h-1zM13 5h1v6h-1zM12 11h1v1h-1z" fill="currentColor" />
       )}
+    </svg>
+  );
+}
+
+function TextIcon({ off }: { off: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" width="20" height="20" shapeRendering="crispEdges" aria-hidden>
+      <path d="M2 2h12v3h-2V4H9v8h2v2H5v-2h2V4H4v1H2z" fill="currentColor" opacity={off ? 0.45 : 1} />
+      {off && <path d="M1 1h2v2H1zM3 3h2v2H3zM5 5h2v2H5zM7 7h2v2H7zM9 9h2v2H9zM11 11h2v2h-2zM13 13h2v2h-2z" fill="currentColor" />}
     </svg>
   );
 }

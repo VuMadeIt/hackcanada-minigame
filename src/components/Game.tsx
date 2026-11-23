@@ -19,6 +19,7 @@ import { Icon, PxButton } from "./ui";
 const SAVE_KEY = "timber-tycoon-save";
 const OWNER_KEY = "timber-tycoon-save-owner";
 const MUTE_KEY = "timber-tycoon-muted";
+const TEXT_KEY = "timber-tycoon-text-off";
 const TAB_KEY = "timber-tycoon-tab";
 
 // Where the axe bites into each tree, as a fraction of the sprite (x from the left, y from the top).
@@ -109,6 +110,8 @@ export default function Game() {
   const [ready, setReady] = useState(false);
   const [panel, setPanel] = useState<PanelId>(null);
   const [muted, setMutedUi] = useState(false);
+  const [textOff, setTextOff] = useState(false);
+  const textOffRef = useRef(false);
   const [welcome, setWelcome] = useState<{ sec: number; wood: number } | null>(null);
   const [banner, setBanner] = useState<Banner | null>(null);
   const [golden, setGolden] = useState<Golden | null>(null);
@@ -148,6 +151,7 @@ export default function Game() {
   }, []);
 
   const showBanner = useCallback((b: Omit<Banner, "key">, ms = 2600) => {
+    if (textOffRef.current) return;
     setBanner({ ...b, key: Date.now() });
     if (bannerTimer.current) clearTimeout(bannerTimer.current);
     bannerTimer.current = setTimeout(() => setBanner(null), ms);
@@ -183,6 +187,10 @@ export default function Game() {
     const m = store.get(MUTE_KEY) === "1";
     setMuted(m);
     setMutedUi(m);
+    const t = store.get(TEXT_KEY) === "1";
+    textOffRef.current = t;
+    fx.quiet = t;
+    setTextOff(t);
     loadVolumes();
     for (const k of ["coin", "log"] as const) {
       const img = new Image();
@@ -572,15 +580,26 @@ export default function Game() {
     }
   }, []);
 
+  const toggleText = useCallback(() => {
+    const t = !textOffRef.current;
+    textOffRef.current = t;
+    fx.quiet = t;
+    setTextOff(t);
+    store.set(TEXT_KEY, t ? "1" : "0");
+    if (t) setBanner(null);
+    play("click");
+  }, [fx]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.code !== "KeyM" || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if ((e.code !== "KeyM" && e.code !== "KeyT") || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       if ((e.target as HTMLElement)?.closest("input, textarea")) return;
-      toggleMute();
+      if (e.code === "KeyM") toggleMute();
+      else toggleText();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [toggleMute]);
+  }, [toggleMute, toggleText]);
 
   const pickName = useCallback(
     async (name: string) => {
@@ -639,7 +658,7 @@ export default function Game() {
           <Hud s={s} d={d} now={now} woodRef={woodRef} coinRef={coinRef} />
 
           <main ref={stageRef} className="stage" style={{ backgroundImage: `url(${spriteUrl(BG[s.zone])})` }}>
-            <SoundMenu muted={muted} onToggleMute={toggleMute} />
+            <SoundMenu muted={muted} onToggleMute={toggleMute} textOff={textOff} onToggleText={toggleText} />
             <div className="tree-label">
               <span>{s.tree.species === "ancient" ? "Ancient tree" : `${s.tree.species[0].toUpperCase()}${s.tree.species.slice(1)} tree`}</span>
               <div className="bar hp">

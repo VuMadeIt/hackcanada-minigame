@@ -76,7 +76,11 @@ export class Fx {
     this.canvas.height = window.innerHeight * this.dpr;
   };
 
+  /** When true, floating numbers and words are skipped; chips, leaves and coins still fly. */
+  quiet = false;
+
   text(x: number, y: number, text: string, opts: { size?: number; color?: string; life?: number; rise?: number } = {}) {
+    if (this.quiet) return;
     if (this.texts.length > 70) this.texts.shift();
     this.texts.push({
       x: x + rand(-14, 14),
@@ -202,6 +206,7 @@ export class Fx {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineJoin = "round";
+    if (this.quiet) this.texts.length = 0;
     this.texts = this.texts.filter((tx) => {
       tx.life += dt;
       if (tx.life >= tx.max) return false;

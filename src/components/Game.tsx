@@ -592,9 +592,10 @@ export default function Game() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.code !== "KeyM" && e.code !== "KeyT") || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if ((k !== "m" && k !== "t") || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
       if ((e.target as HTMLElement)?.closest("input, textarea")) return;
-      if (e.code === "KeyM") toggleMute();
+      if (k === "m") toggleMute();
       else toggleText();
     };
     window.addEventListener("keydown", onKey);

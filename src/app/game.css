@@ -499,7 +499,7 @@
 /* stacked so the three buttons stay clear of the tree label on short landscape screens */
 @media (max-height: 560px) and (orientation: landscape) {
   .sound-box { flex-direction: column; }
-  .sound-menu { top: 0; left: calc(100% + 6px); }
+  .sound-menu { top: 0; left: calc(100% + 6px); width: min(240px, calc(100cqw - 68px)); }
 }
 @media (max-height: 560px) and (orientation: landscape) {
   .game { grid-template-columns: 180px 1fr 88px; grid-template-rows: 100%; }
